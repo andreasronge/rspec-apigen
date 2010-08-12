@@ -115,19 +115,19 @@ With an input like this
       new(fixture(:source_account, "Account with 50 USD"), 5, 'USD' ) do
         return_value("A transfer of 5 USD from Account with 50 USD") do
           it { subject.amount.should == 50 }
-          it { subject.source_account == fixture(:source_account)}
+          it { subject.source_account.should == fixture(:source_account)}
       end
 
     context "Public Instance Methods" do
       to(fixture(:target_account)) do
         given("A transfer of 5 USD from Account with 50 USD") do
           target_account do
-            it { subject.balance == 5 }
-            it { subject.currency == 'USD' }
+            it { subject.balance.should == 5 }
+            it { subject.currency.should == 'USD' }
           end
           source_account do
-            it { subject.balance == 45 }
-            it { subject.currency == 'USD' }
+            it { subject.balance.should == 45 }
+            it { subject.currency.should == 'USD' }
           end
         end
       end
