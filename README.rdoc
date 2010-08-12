@@ -1,7 +1,8 @@
 == What is this ?
 
-This is an early experiment how to generate an API documentation using RSpec and DSL magic.
+A tool that generates an API documentation using RSpec and some DSL magic.
 If successful I might use it for my own project (neo4j.rb)
+*This is an early experiment !*
 
 === How ?
 
@@ -24,6 +25,8 @@ Instead of writing specs like this:
         end
       end
     end
+
+Which generates the following output
 
     $ spec ./spec/account_spec.rb --format nested
     Account
@@ -49,7 +52,7 @@ I want to generate an API documentation something like this from an RSpec Macro 
     Public Instance Methods
       #transfere(5:Fixnum, 'USD':String)
          given Account with 50 USD
-           return value: TransactionBuilder transfere 5 USD from Account with 50 USD
+           return value: A transfer of 5 USD from Account with 50 USD
              has #target == nil
              is kind of TransactionBuilder
          given Account has 0 USD 
@@ -58,13 +61,14 @@ I want to generate an API documentation something like this from an RSpec Macro 
   TransactionBuilder
     Public Class Methods
       #new(source_account:Account with 50 USD, 5:Fixnum, 'USD':String) 
-         return value: TransactionBuilder transfere 5 USD from Account with 50 USD
-           has #balance == 0
+         return value: A transfer of 5 USD from Account with 50 USD
+           has #amount == 50
            has #currency == 'USD'
+           has #source_account == "Account with 50 USD"
 
     Public Instance Methods
       #to(target_account:Account with 0 USD) 
-         given TransactionBuilder transfere 5 USD from Account with 50 USD
+         given A transfer of 5 USD from Account with 50 USD
            target_account 
              has #balance == 5
              has #currency == 'USD'
@@ -72,7 +76,62 @@ I want to generate an API documentation something like this from an RSpec Macro 
              has #balance == 45
              has #currency == 'USD'
       #source_account
-         given TransactionBuilder transfere 5 USD from Account with 50 USD
+         given TransactionBuilder transfer 5 USD from Account with 50 USD
          return value
             is Account with 50 USD
    
+With an input like this
+  describe Account do
+    context "Public Class Methods" do
+      new() do
+        return_value("Account with 0 USD") do
+           it {balance.should == 0}
+           it {currency.should == 'USD'}
+        end
+
+      new(5, 'USD') do
+        return_value("Account with 0 USD") do
+           it {balance.should == 0}
+           it {currency.should == 'USD'}
+        end
+
+    end
+
+    context "Public Instance Methods" do
+      transfer(5, 'USD') do
+        given("Account with 50 USD") do
+          return_value("A transfer of 5 USD from Account with 50 USD") do
+             it { should kind_of(TransactionBuilder)}
+          end
+        end
+        given("Account with 0 USD") do
+          throws_exception(SomeExceptionClass)
+        end
+    end
+  end
+
+  describe TransactionBuilder do
+    context "Public Class Methods" do
+      new(fixture(:source_account, "Account with 50 USD", 5, 'USD' ) do
+        return_value("A transfer of 5 USD from Account with 50 USD") do
+          it { subject.amount.should == 50 }
+          it { subject.source_account == fixture(:source_account)}
+      end
+
+    context "Public Instance Methods" do
+      to(fixture(:target_account)) do
+        given("A transfer of 5 USD from Account with 50 USD") do
+          target_account do
+            it { subject.balance == 5 }
+            it { subject.currency == 'USD' }
+          end
+          source_account do
+            it { subject.balance == 45 }
+            it { subject.currency == 'USD' }
+          end
+        end
+      end
+
+=== Dependencies
+
+ gem install rspec --prerelease
