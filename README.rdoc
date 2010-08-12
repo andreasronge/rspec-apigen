@@ -1,0 +1,78 @@
+== What is this ?
+
+This is an early experiment how to generate an API documentation using RSpec and DSL magic.
+If successful I might use it for my own project (neo4j.rb)
+
+=== How ?
+
+Instead of writing specs like this:
+
+  describe Account do
+      context "transfering money" do
+        it "deposits transfer amount to the other account" do
+          source = Account.new(50, :USD)
+          target = mock('target account')
+          target.should_receive(:deposit).with(Money.new(5, :USD))
+          source.transfer(5, :USD).to(target)
+        end
+
+        it "reduces its balance by the transfer amount" do
+          source = Account.new(50, :USD)
+          target = stub('target account')
+          source.transfer(5, :USD).to(target)
+          source.balance.should == Money.new(45, :USD)
+        end
+      end
+    end
+
+    $ spec ./spec/account_spec.rb --format nested
+    Account
+      transfering money
+        deposits transfer amount to the other account
+        reduces its balance by the transfer amount
+  
+    2 examples, 0 failures
+
+I want to generate an API documentation something like this from an RSpec Macro DSL.
+
+  Account
+    Public Class Methods
+      #new() 
+        return value: Account with 0 USD
+           has #balance == 0
+           has #currency == 'USD'
+      #new(50:Fixnum, 'USD':String)
+         return value: Account with 50 USD
+           has #balance == 50
+           has #currency == 'USD'
+
+    Public Instance Methods
+      #transfere(5:Fixnum, 'USD':String)
+         given Account with 50 USD
+           return value: TransactionBuilder transfere 5 USD from Account with 50 USD
+             has #target == nil
+             is kind of TransactionBuilder
+         given Account has 0 USD 
+             throws an Exception
+
+  TransactionBuilder
+    Public Class Methods
+      #new(source_account:Account with 50 USD, 5:Fixnum, 'USD':String) 
+         return value: TransactionBuilder transfere 5 USD from Account with 50 USD
+           has #balance == 0
+           has #currency == 'USD'
+
+    Public Instance Methods
+      #to(target_account:Account with 0 USD) 
+         given TransactionBuilder transfere 5 USD from Account with 50 USD
+           target_account 
+             has #balance == 5
+             has #currency == 'USD'
+           #source_account has
+             has #balance == 45
+             has #currency == 'USD'
+      #source_account
+         given TransactionBuilder transfere 5 USD from Account with 50 USD
+         return value
+            is Account with 50 USD
+   
