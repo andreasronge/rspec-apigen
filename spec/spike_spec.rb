@@ -50,15 +50,16 @@ describe Foo do
     return_value { should_not be_nil }
     return_value {should include('apa')  }
     it "should have subject" do
-      puts "Subject = #{subject}"
+#      puts "Subject = #{subject}"
       should be_kind_of(Class)
     end
   end
 
-  instance_method(:union, :args =>[[1,2,3]], :use_context => 'empty') do
-    context
-    return_value {should be_empty}
-  end
+# TODO
+#  instance_method(:union, :args =>[[1,2,3]], :use_context => 'empty') do
+#    context
+#    return_value {should be_empty}
+#  end
 
   
   describe "#union ([1,2,3]:Array)" do
