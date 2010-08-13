@@ -52,6 +52,8 @@ I want to generate an API documentation something like this from an RSpec Macro 
     Public Instance Methods
       #transfer(5:Fixnum, 'USD':String)
          given Account with 50 USD
+           should accept given arguments (5:Fixnum, 'USD':String)
+           does not modify balance
            return value: A transfer of 5 USD from Account with 50 USD
              has #target == nil
              is kind of TransactionBuilder
@@ -99,15 +101,20 @@ With an input like this
 
     context "Public Instance Methods" do
       transfer(5, 'USD') do
-        given("Account with 50 USD") do
+        given(Account.new(50,'USD') do
           return_value("A transfer of 5 USD from Account with 50 USD") do
              it { should kind_of(TransactionBuilder)}
           end
+          it("should not modify balance") { subject.balance.should == 50}
         end
-        given("Account with 0 USD") do
+        given(Account.new(0,'USD') do
           throws_exception(SomeExceptionClass)
         end
     end
+  end
+
+  fixture "Account with 50 USD" do
+     subject { Account.new(50, 'USD') }
   end
 
   describe TransactionBuilder do
