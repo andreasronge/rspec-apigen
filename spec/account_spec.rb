@@ -1,9 +1,8 @@
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__), "..", "lib")
 require 'rspec'
 require 'spec_helper'
 
 
-class Account < Array
+class Account
   attr_accessor :balance, :currency
   def initialize(balance=0, currency = 'USD')
     @balance = balance
@@ -11,8 +10,6 @@ class Account < Array
 #    puts "Create account #{balance} #{currency}"
   end
 
-  alias_method :union, :&
-  
 end
 
 
