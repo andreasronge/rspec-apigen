@@ -2,7 +2,7 @@
 
 A tool that generates an API documentation using RSpec and some DSL magic.
 If successful I might use it for my own project (neo4j.rb)
-*This is an early experiment !*
++This is an early experiment !+
 
 === How ?
 
@@ -89,9 +89,9 @@ With an input like this
            it {currency.should == 'USD'}
         end
 
-      new(5, 'USD') do
-        return_value("Account with 0 USD") do
-           it {balance.should == 0}
+      new(50, 'USD') do
+        return_value("Account with 50 USD") do
+           it {balance.should == 50}
            it {currency.should == 'USD'}
         end
 
@@ -131,6 +131,9 @@ With an input like this
           end
         end
       end
+
+A future goal is to merge the RDoc with the output of rspec-apigen, not sure how ...
+
 
 === Example
  gem install rspec --prerelease (2.0.0.beta.19)
