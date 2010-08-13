@@ -24,31 +24,29 @@ class TransactionBuilder
 end
 
 describe Account do
-
-
-  describe "Public Class Methods" do
-    static_method(:new, :args=>[]) do
+  static_methods do
+    new do
       return_value("Account with 0 USD") do
-#        it_behaves_like "Account with 0 USD"
+#        it_behaves_like "Account with 0 USD" can also be used
         it("has #balance == 0") { subject.balance.should == 0 }
         it("has #currency == 'USD") { subject.currency.should == 'USD' }
       end
     end
 
+    # can also use the static_method instead of calling with new
     static_method(:new, :args=>[50, 'USD']) do
       return_value("Account with 50 USD") do
         it("has #balance == 50") { subject.balance.should == 50 }
         it("has #currency == 'USD") { subject.currency.should == 'USD' }
       end
     end
-
   end
 
-  describe "Public Instance Methods" do
-    instance_method(:transfer, :args =>[5, 'USD']) do
+  instance_methods do
+    transfer(5, 'USD') do
       given(Account.new(50, 'USD')) do
         return_value("A transfer of 5 USD from Account with 50 USD") do
-          it("should return a TransactionBuilder") { should be_kind_of(TransactionBuilder) }
+          it { should be_kind_of(TransactionBuilder) }
         end
         it "does not modify balance" do
           subject.balance.should == 50
