@@ -65,13 +65,18 @@ I want to generate an API documentation something like this from an RSpec Macro 
              has #target == nil
              is kind of TransactionBuilder
            then TODO TODO TODO
-         given Account has 0 USD 
-             throws an Exception
+         scenario 'account has to little money'
+           given amount 50
+           given currency 'USD'
+           then subject throws an exception
 
   TransferDSL
     Public Class Methods
-      #new(source_account:Account with 50 USD, 5:Fixnum, 'USD':String) 
-         return value: A transfer of 5 USD from Account with 50 USD
+      #new(source_account, amount, currency)
+         given source_account Account with 50 USD
+         given amount 50
+         given currency 'USD'
+         then return value: A transfer of 5 USD from Account with 50 USD
            has #amount == 50
            has #currency == 'USD'
            has #source_account == "Account with 50 USD"
@@ -81,27 +86,16 @@ I want to generate an API documentation something like this from an RSpec Macro 
          scenario 'source account has enough money'
            given target_account: Account with 0 USD
            given subject: A transfer of 5 USD from Account with 50 USD
-           then target_account: Account with 5 USD
-           then subject: Source Account with 45 USD
+           then target_account is an Account with 5 USD
+             has amount 50
+             has currency 'USD'
+           then subject#source_account Source Account with 45 USD
+             has amount 45
+             has currency 'USD'
 
          scenario 'source account does not have enough money'
            ...
-           then subject: should raise an exception
 
-           TODO
-         when :Account with 0 USD)
-         given subject: A transfer of 5 USD from Account with 50 USD
-           target_account 
-             has #balance == 5
-             has #currency == 'USD'
-           subject#source_account has
-             has #balance == 45
-             has #currency == 'USD'
-      #source_account
-         given TransactionBuilder transfer 5 USD from Account with 50 USD
-         return value
-            is Account with 50 USD
-   
 With an input like this
 
   describe Account do
@@ -115,19 +109,27 @@ With an input like this
       end
 
       # can also use the static_method instead of calling with new
-      static_method(:new, :args=>[50, 'USD']) do
+      new(arg(:amount, 50), arg(:currency, 'USD')) do
+        scenario 'account and currency has valid values'
         return_value("Account with 50 USD") do
           it("has #balance == 50") { subject.balance.should == 50 }
           it("has #currency == 'USD") { subject.currency.should == 'USD' }
         end
       end
+
+      new(arg(:amount, 50), arg(:currency,'UX!D')) do
+        scenario 'an unknown currency'
+        throws(Error)
+      end
+
     end
 
     instance_methods do
-      transfer(5, 'USD') do
-        given(Account.new(50, 'USD')) do
+      transfer(arg(:amount, 50), arg(:currency, 'USD')) do
+        given(Account.fixture(:account_50)) do
+          scenario 'account and currency has valid values'
           return_value("A transfer of 5 USD from Account with 50 USD") do
-            it { should be_kind_of(TransactionBuilder) }
+            it { should be_kind_of(TransferDSL) }
           end
           it "does not modify balance" do
             subject.balance.should == 50
@@ -135,63 +137,58 @@ With an input like this
         end
       end
     end
+
+    add_fixture(:account_50, Account) do
+       create { Account.new(50, 'USD') }
+    end
   end
 
-  describe Account do
+  describe TransferDSL do
     static_methods do
-      new() do
-        return_value("Account with 0 USD") do
-           it {balance.should == 0}
-           it {currency.should == 'USD'}
-        end
-
-      new(50, 'USD') do
-        return_value("Account with 50 USD") do
-           it {balance.should == 50}
-           it {currency.should == 'USD'}
+      new(arg(:source_account, :account_50)) do
+        return_value("A Transfer DSL with a source account") do
+           it {subject.source_account.balance.should  == fixture(:account_50).create.balance}
+           it {subject.source_account.currency.should == fixture(:account_50).create.currency'}
         end
 
     end
 
     instance_methods do
-      transfer(5, 'USD') do
-        given(Account.new(50,'USD') do
-          return_value("A transfer of 5 USD from Account with 50 USD") do
-             it { should kind_of(TransactionBuilder)}
+      to(arg(:target_account, :account_10), arg(:amount, 5), arg(:currency, 'USD')) do
+        given(TransferDSL.fixture(:transfer_from_50)) do
+          scenario 'source account has enough money'
+          describe_arg(:target_account) do
+             it "should add the amount to the target account" { subject.amount.should == fixture(:account_10).create.amount + arg(:amount) }
           end
-          it("should not modify balance") { subject.balance.should == 50}
+          it("should take money from the source account") { subject.source_account.balance.should == fixture(:transfer_from_50} - arg(:amount) }
         end
-        given(Account.new(0,'USD') do
-          throws_exception(SomeExceptionClass)
+      end
+
+      to(arg(:target_account, :account_10), arg(:amount, 5), arg(:currency, 'USD')) do
+        given(TransferDSL.fixture(:transfer_from_5)) do
+          scenario 'source account does NOT have enough money'
+          describe_arg(:target_account) do
+             it "should add the amount to the target account" { subject.amount.should == fixture(:account_10).create.amount + arg(:amount) }
+          end
+          should_raise(Error)
         end
+
     end
+
+    add_fixture(:transfer_from_50, TransferDSL) do
+       create { TransferDSL.new(Account.fixture(:account_50)) }
+    end
+
+    add_fixture(:transfer_from_5, TransferDSL) do
+       create { TransferDSL.new(Account.fixture(:account_5)) }
+    end
+
+    add_fixture(:account_50, Account) do
+       create { Account.new(50, 'USD') }
+    end
+
   end
 
-  fixture "Account with 50 USD" do
-     subject { Account.new(50, 'USD') }
-  end
-
-  describe TransactionBuilder do
-    context "Public Class Methods" do
-      new(fixture(:source_account, "Account with 50 USD"), 5, 'USD' ) do
-        return_value("A transfer of 5 USD from Account with 50 USD") do
-          it { subject.amount.should == 50 }
-          it { subject.source_account.should == fixture(:source_account)}
-      end
-
-    context "Public Instance Methods" do
-      to(fixture(:target_account)) do
-        given("A transfer of 5 USD from Account with 50 USD") do
-          target_account do
-            it { subject.balance.should == 5 }
-            it { subject.currency.should == 'USD' }
-          end
-          source_account do
-            it { subject.balance.should == 45 }
-            it { subject.currency.should == 'USD' }
-          end
-        end
-      end
 
 A future goal is to merge the RDoc with the output of rspec-apigen, not sure how ...
 
