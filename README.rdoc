@@ -2,7 +2,7 @@
 
 A tool that generates an API documentation using RSpec and some DSL magic.
 If successful I might use it for my own project (neo4j.rb)
-+This is an early experiment !+
+<b>This is an early experiment !</b>
 
 === How ?
 
@@ -40,27 +40,35 @@ I want to generate an API documentation something like this from an RSpec Macro 
 
   Account
     Public Class Methods
-      #new() 
-        return value: Account with 0 USD
+      #new()
+        then return value: Account with 0 USD
            has #balance == 0
            has #currency == 'USD'
-      #new(50:Fixnum, 'USD':String)
-         return value: Account with 50 USD
-           has #balance == 50
-           has #currency == 'USD'
+      #new(amount, currency)
+         scenario 'account and currency has valid values'
+           given amount 50
+           given currency 'USD'
+           then return_value: "Account with 50 USD"
+             has #amount == 50
+             has #currency == 'USD'
+         scenario 'an unknown currency'
+           given amount 50
+           given currency QD!
+           then subject throws an exception
 
     Public Instance Methods
-      #transfer(5:Fixnum, 'USD':String)
-         given Account with 50 USD
-           should accept given arguments (5:Fixnum, 'USD':String)
-           does not modify balance
-           return value: A transfer of 5 USD from Account with 50 USD
+      #transfer(amount, currency)
+         scenario 'account and currency has valid values'
+           given amount 50
+           given currency 'USD'
+           then return value: A transfer of 5 USD from Account with 50 USD
              has #target == nil
              is kind of TransactionBuilder
+           then TODO TODO TODO
          given Account has 0 USD 
              throws an Exception
 
-  TransactionBuilder
+  TransferDSL
     Public Class Methods
       #new(source_account:Account with 50 USD, 5:Fixnum, 'USD':String) 
          return value: A transfer of 5 USD from Account with 50 USD
@@ -69,12 +77,24 @@ I want to generate an API documentation something like this from an RSpec Macro 
            has #source_account == "Account with 50 USD"
 
     Public Instance Methods
-      #to(target_account:Account with 0 USD) 
-         given A transfer of 5 USD from Account with 50 USD
+      #to(target_account)
+         scenario 'source account has enough money'
+           given target_account: Account with 0 USD
+           given subject: A transfer of 5 USD from Account with 50 USD
+           then target_account: Account with 5 USD
+           then subject: Source Account with 45 USD
+
+         scenario 'source account does not have enough money'
+           ...
+           then subject: should raise an exception
+
+           TODO
+         when :Account with 0 USD)
+         given subject: A transfer of 5 USD from Account with 50 USD
            target_account 
              has #balance == 5
              has #currency == 'USD'
-           #source_account has
+           subject#source_account has
              has #balance == 45
              has #currency == 'USD'
       #source_account

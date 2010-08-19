@@ -7,5 +7,8 @@ RSpec.configure do |c|
  c.extend RSpec::ApiGen
 end
 
+require 'account'
+require 'transfer_dsl'
+
 
 #$LOAD_PATH.unshift File.dirname(__FILE__)

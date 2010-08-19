@@ -1,5 +1,41 @@
 module RSpec::ApiGen
 
+  class Fixture
+    attr_reader :description
+    attr_reader :create_proc
+    attr_reader :destroy_proc
+    
+    def initialize(description, create_proc, destroy_proc = nil)
+      @description = description
+      @create_proc = create_proc
+      @destroy_proc = destroy_proc
+    end
+
+    def create
+      @create_proc.call
+    end
+  end
+
+  def add_fixture(name, clazz, description=nil, &block)
+    def clazz.fixture(name)
+      @_fixtures[name.to_sym]
+    end unless clazz.respond_to?(:fixture)
+
+    dsl = Object.new
+    dsl_meta = class << dsl; self; end
+    create_block = nil
+    dsl_meta.send(:define_method, :create) do |&b|
+      create_block = b
+    end
+    dsl.instance_eval &block
+
+    clazz.instance_eval do
+      @_fixtures ||= {}
+      @_fixtures[name.to_sym] = Fixture.new(description, create_block)
+    end
+  end
+
+
   def instance_method(method, param, &block)
     args = param[:args]
 
@@ -49,12 +85,19 @@ module RSpec::ApiGen
       subject { clazz }
       self.instance_eval(&block)
       context "return value: #{return_value_meth[:example_desc][0]}" do
-        subject { clazz.new(*args) }
+        new_args = create_fixtures_in_arguments(args)
+        new_args.each {|x| puts "NEW ARG #{x}"}
+        subject { clazz.send(method, *args) }
         self.instance_eval(&return_value_meth[:example])
       end if return_value_meth
     end
   end
 
+  def create_fixtures_in_arguments(args)
+    args.collect do |a|
+      a.kind_of?(Fixture) ? a.create : a
+    end
+  end
 
   def describe_args(args)
     "(#{args.collect { |x| "#{x}:#{x.class}" }.join(',')})"
