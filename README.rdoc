@@ -106,7 +106,7 @@ With an input like this
   describe Account do
     static_methods do
       new do
-        describe_return("Account with 0 USD") do
+        then_describe("Account with 0 USD") do # or then_describe_return
   #        it_behaves_like "Account with 0 USD" can also be used
           it("has #balance == 0") { subject.balance.should == 0 }
           it("has #currency == 'USD") { subject.currency.should == 'USD' }
@@ -116,7 +116,7 @@ With an input like this
       # can also use the static_method instead of calling with new
       new(arg(:amount, 50), arg(:currency, 'USD')) do
         scenario 'account and currency has valid values'
-        describe_return("Account with 50 USD") do
+        then_describe("Account with 50 USD") do
           it("has #balance == 50") { subject.balance.should == 50 }
           it("has #currency == 'USD") { subject.currency.should == 'USD' }
         end
@@ -133,12 +133,11 @@ With an input like this
       transfer(arg(:amount, 50), arg(:currency, 'USD')) do
         given(Account.new(50, 'USD')) do
           scenario 'account and currency has valid values'
-          describe_return("A transfer of 5 USD from Account with 50 USD") do
+          then_describe("A transfer of 5 USD from Account with 50 USD") do
             it { should be_kind_of(TransferDSL) }
           end
-          it "does not modify balance" do
-            subject.balance.should == 50
-          end
+          it { balance.should == 50 }
+          it { balance.should == 'USD' }
         end
       end
     end
@@ -147,25 +146,25 @@ With an input like this
 
   describe TransferDSL do
     static_methods do
-      new(arg(:source_account, :account_50)) do
-        describe_return("A Transfer DSL with a source account") do
-           it {subject.source_account.balance.should  == fixture(:account_50).create.balance}
-           it {subject.source_account.currency.should == fixture(:account_50).create.currency'}
+      new(arg(:source_account, Account.new(50, 'USD')) do
+        then_describe("A Transfer DSL with a source account") do
+           it {subject.source_account.balance.should  == 50}
+           it {subject.source_account.currency.should == 'USD'}
         end
 
     end
 
     instance_methods do
       to(arg(:target_account, Account.new), arg(:amount, 5), arg(:currency, 'USD')) do
-        given(TransferDSL.new(Account.new(50, 'USD'), 5, 'USD')) do
+        given_subject(TransferDSL.new(Account.new(50, 'USD'), 5, 'USD')) do
           scenario 'source account has enough money'
-          describe_arg(:target_account) do
-             it "has amount 5" { amount.should == 5 }
-             it "has currency 'USD" { currency.should == 'USD' }
+          then_describe(:target_account, "is an account with 5 USD") do
+             it { amount.should == 5 }
+             it { currency.should == 'USD' }
           end
-          describe_method(:source_account) do  # not sure about describe_method name ?
-             it "has amount 45" { amount.should == 45 }
-             it "has currency 'USD" { currency.should == 'USD' }
+          then_describe(:source_account, "is an account with 45 USD") do
+             it { amount.should == 45 }
+             it { currency.should == 'USD' }
           end
         end
       end
