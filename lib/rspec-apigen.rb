@@ -11,7 +11,9 @@ module RSpec::ApiGen
     end unless clazz.respond_to?(:fixture)
 
     dsl = Object.new
-    dsl_meta = class << dsl; self; end
+    dsl_meta = class << dsl;
+      self;
+    end
     create_block = nil
     dsl_meta.send(:define_method, :create) do |&b|
       create_block = b
@@ -27,7 +29,7 @@ module RSpec::ApiGen
 
   def create_given_obj(given_args)
     given_obj = Object.new
-    given_args.each_pair do |key,value|
+    given_args.each_pair do |key, value|
       # create a reader method on the given obj
       MetaHelper.create_instance_method(given_obj, key) { value }
     end
@@ -38,7 +40,7 @@ module RSpec::ApiGen
     given_obj
   end
 
-  
+
   def execute_given_block(args, given_block)
     given_args = {}
     arg_obj = Object.new
@@ -65,54 +67,61 @@ module RSpec::ApiGen
     given_args
   end
 
+  def run_scenario(method, args, block)
+    # have we defined any scenarios ?
+    MetaHelper.create_instance_method(self, :scenario) do |*scenario_desc, &scenario_block|
+      puts "Create Scenario Context"
+      context "Scenario #{scenario_desc[0]}" do
+        run_scenario(method, args, scenario_block)
+      end
+    end
+
+    # create method to set the describe_return variable
+    describe_return = nil
+    MetaHelper.create_instance_method(self, :describe_return) do |*example_desc,
+            &example|
+      describe_return = {:example => example, :example_desc => example_desc}
+    end
+
+    # create method to set the given_block variable
+    given_block = nil
+    MetaHelper.create_instance_method(self, :given) { |&b| given_block = b }
+
+    # eval and set the given_block and describe_return variables
+    clazz = describes
+    subject { clazz }
+    self.instance_eval(&block)
+
+    # if we have a given block then we can get the given arguments values
+    given_args = given_block ? execute_given_block(args, given_block) : {}
+
+    # for each argument we replace the args with the real value
+    args.collect! { |arg| arg.kind_of?(Argument) ? given_args[arg.name] : arg }
+
+    context "then returns #{describe_return[:example_desc][0]}" do
+      subject { clazz.send(method, *args) }
+
+      # create a given object which returns the given arguments
+      given_obj = create_given_obj(given_args)
+      # add a method given
+      MetaHelper.create_instance_method(self, :given) { given_obj }
+
+      # run the example in the describe_return block
+      self.instance_eval(&describe_return[:example])
+    end if describe_return
+  end
+
   def static_method(method, param, &block)
     puts "DEFINE METHOD #{method} on #{self}"
     args = param[:args]
     context "##{method}", describe_args(args) do
-
-      # create method to set the describe_return variable
-      describe_return = nil
-      MetaHelper.create_instance_method(self, :describe_return) do |*example_desc, &example|
-        describe_return = {:example => example, :example_desc => example_desc}
-      end
-
-      # create method to set the given_block variable
-      given_block = nil
-      MetaHelper.create_instance_method(self, :given) { |&b| given_block = b}
-
-      # eval and set the given_block and describe_return variables
-      clazz = describes
-      subject { clazz }
-      self.instance_eval(&block)
-
-      # if we have a given block then we can get the given arguments values
-      given_args = given_block ? execute_given_block(args, given_block) : {}
-
-      # for each argument we replace the args with the real value
-      args.collect! {|arg| arg.kind_of?(Argument)? given_args[arg.name] : arg}
-
-      context "then returns #{describe_return[:example_desc][0]}" do
-        subject { clazz.send(method, *args) }
-
-        # create a given object which returns the given arguments
-        given_obj = create_given_obj(given_args)
-        # add a method given  
-        MetaHelper.create_instance_method(self, :given) { given_obj }
-
-        # run the example in the describe_return block
-        self.instance_eval(&describe_return[:example])
-      end if describe_return
+      run_scenario(method, args, block)
     end
-  end
 
-  def create_fixtures_in_arguments(args)
-    args.collect do |a|
-      a.kind_of?(Fixture) ? a.create : a
-    end
   end
 
   def describe_args(args)
-    "(#{args.collect { |x| x.kind_of?(Argument)? x.name : "#{x}:#{x.class}" }.join(',')})"
+    "(#{args.collect { |x| x.kind_of?(Argument) ? x.name : "#{x}:#{x.class}" }.join(',')})"
   end
 
   def static_methods(&block)
@@ -120,14 +129,12 @@ module RSpec::ApiGen
     describe "Public Static Methods" do
       static_context = StaticMethods.new
 
-       # TODO - how do I find which methods was defined on the clazz and not inherited ?
+      # TODO - how do I find which methods was defined on the clazz and not inherited ?
       def_methods = clazz.public_methods - Object.methods + %w[new]
       current_context = self
-      puts "DEF METHODS #{def_methods}"
       def_methods.each do |meth_name|
         MetaHelper.create_instance_method(static_context, meth_name) do |*args, &example_group|
-#        metaclass.send(:define_method, meth_name) do |*args, &example_group|
-         current_context.static_method(meth_name, :args => args, &example_group)
+          current_context.static_method(meth_name, :args => args, &example_group)
         end
       end
       static_context.instance_eval(&block)
@@ -152,6 +159,6 @@ module RSpec::ApiGen
       end
       yield
     end
-    end
-
   end
+
+end
