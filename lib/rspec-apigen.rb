@@ -1,3 +1,5 @@
+require 'meta_helper'
+
 module RSpec::ApiGen
 
   class Fixture
@@ -15,6 +17,7 @@ module RSpec::ApiGen
       @create_proc.call
     end
   end
+
 
   def add_fixture(name, clazz, description=nil, &block)
     def clazz.fixture(name)
@@ -36,60 +39,105 @@ module RSpec::ApiGen
   end
 
 
-  def instance_method(method, param, &block)
-    args = param[:args]
-
-    metaclass = class << self;
-      self;
-    end # get the singleton class for current object
-    return_value_meth = nil
-    metaclass.send(:define_method, :return_value) do |*example_desc, &example|
-      return_value_meth = {:example => example, :example_desc => example_desc}
+  class Argument
+    attr_reader :name, :description
+    def initialize(name, description)
+      @name = name
+      @description = description
     end
 
-    given_subject = nil
-    given_block = nil
-    metaclass.send(:define_method, :given) do |object, &b|
-      given_subject = object
-      given_block = b
+    def to_s
+      "Arg #{name}"
+    end
+  end
+
+  def arg(name, description='')
+    Argument.new(name, description)
+  end
+
+
+  
+  def singleton_of(obj)
+    class << obj; self; end
+  end
+
+
+  def create_given_obj(given_args)
+    given_obj = Object.new
+    given_args.each_pair do |key,value|
+      # create a reader method on the given obj
+      MetaHelper.create_instance_method(given_obj, key) { value }
+    end
+    MetaHelper.create_instance_method(given_obj, :method_missing) do |meth|
+      fail("Tried to get an undefined given argument #{meth}")
     end
 
-    context "##{method}", describe_args(args) do
-      self.instance_eval(&block)
-      context "Given #{given_subject}" do
-        subject { given_subject }
-        ret_value = nil
-        it "should accept given arguments" do
-          ret_value = given_subject.send(method, *args)
-        end
-        self.instance_eval(&given_block)
-        context "return value: #{return_value_meth[:example_desc][0]}" do
-          subject { ret_value }
-          self.instance_eval(&return_value_meth[:example])
-        end if return_value_meth
+    given_obj
+  end
+
+  
+  def execute_given_block(args, given_block)
+    given_args = {}
+    arg_obj = Object.new
+
+    # for each arguments
+    args.find_all { |a| a.kind_of?(Argument) }.each do |arg|
+      MetaHelper.create_instance_method(arg_obj, "#{arg.name}=") do |val|
+        given_args[arg.name] = val
       end
     end
+
+    # add some error checking if accessing an undefined argument
+    MetaHelper.create_instance_method(arg_obj, :method_missing) do |meth|
+      fail("Tried to set an undefined argument #{meth}")
+    end
+
+    # create the arg method on a new object
+    obj = Object.new
+    MetaHelper.create_instance_method(obj, :arg) { arg_obj }
+
+    # populate the given_args variable using the created new Object as context
+    obj.instance_eval(&given_block)
+
+    given_args
   end
 
   def static_method(method, param, &block)
     args = param[:args]
     context "##{method}", describe_args(args) do
-      metaclass = class << self;
-        self;
-      end # get the singleton class for current object
-      return_value_meth = nil
-      metaclass.send(:define_method, :return_value) do |*example_desc, &example|
-        return_value_meth = {:example => example, :example_desc => example_desc}
+
+      # create method to set the describe_return variable
+      describe_return = nil
+      MetaHelper.create_instance_method(self, :describe_return) do |*example_desc, &example|
+        describe_return = {:example => example, :example_desc => example_desc}
       end
+
+      # create method to set the given_block variable
+      given_block = nil
+      MetaHelper.create_instance_method(self, :given) { |&b| given_block = b}
+
+      # eval and set the given_block and describe_return variables
       clazz = describes
       subject { clazz }
       self.instance_eval(&block)
-      context "return value: #{return_value_meth[:example_desc][0]}" do
-        new_args = create_fixtures_in_arguments(args)
-        new_args.each {|x| puts "NEW ARG #{x}"}
+
+      # if we have a given block then we can get the given arguments values
+      given_args = given_block ? execute_given_block(args, given_block) : {}
+
+      # for each argument we replace the args with the real value
+      args.collect! {|arg| arg.kind_of?(Argument)? given_args[arg.name] : arg}
+
+      context "then returns #{describe_return[:example_desc][0]}" do
         subject { clazz.send(method, *args) }
-        self.instance_eval(&return_value_meth[:example])
-      end if return_value_meth
+
+        # create a given object which returns the given arguments
+        given_obj = create_given_obj(given_args)
+        # add a method given  
+        MetaHelper.create_instance_method(self, :given) { given_obj }
+
+        # run the example in the describe_return block
+        self.instance_eval(&describe_return[:example])
+      end if describe_return
     end
   end
 
@@ -100,7 +148,7 @@ module RSpec::ApiGen
   end
 
   def describe_args(args)
-    "(#{args.collect { |x| "#{x}:#{x.class}" }.join(',')})"
+    "(#{args.collect { |x| x.kind_of?(Argument)? x.name : "#{x}:#{x.class}" }.join(',')})"
   end
 
   def static_methods
@@ -108,9 +156,11 @@ module RSpec::ApiGen
     metaclass = class << self
       self
     end
+    # TODO It comes in the wrong order
     describe "Public Static Methods" do
       def_methods = clazz.methods - Object.methods + %w[new]
       def_methods.each do |meth_name|
+#        MetaHelper.create_instance_method(self, meth_name) do |*args, &example_group|
         metaclass.send(:define_method, meth_name) do |*args, &example_group|
           if example_group # UGLY, since we have modified wrong new method
             static_method(meth_name, :args => args, &example_group)

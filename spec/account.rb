@@ -12,6 +12,6 @@ class Account
     TransactionBuilder.new
   end
   def to_s
-    "Account #{balance} #{currency}"
+    "Account balance: #{balance} #{currency}"
   end
 end

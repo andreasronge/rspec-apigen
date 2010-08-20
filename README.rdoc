@@ -48,7 +48,7 @@ I (also) want to generate a detailed API documentation something like this from 
          scenario 'account and currency has valid values'
            given amount 50
            given currency 'USD'
-           then return_value: "Account with 50 USD"
+           then returns "Account with 50 USD"
              has #amount == 50
              has #currency == 'USD'
 
@@ -117,8 +117,8 @@ With an input like this
       new(arg(:amount), arg(:currency)) do
         scenario 'account and currency has valid values' do
           given do
-            amount   = 50
-            currency = 'USD'
+            arg.amount   = 50
+            arg.currency = 'USD'
           end
 
           describe_return "an Account with given amount and currency" do
@@ -129,8 +129,8 @@ With an input like this
 
         scenario 'an unknown currency' do
           given do
-            amount   = 50
-            currency = 'UX!'
+            arg.amount   = 50
+            arg.currency = 'UX!'
           end
           throws(Error)
         end
@@ -142,9 +142,9 @@ With an input like this
       transfer(arg(:amount), arg(:currency)) do
         scenario 'transfer amount and currency have valid values' do
           given do
-            amount = 5
-            currency = 'USD'
-            subject = Account.new(50,'USD')
+            arg.amount = 5
+            arg.currency = 'USD'
+            subject{Account.new(50,'USD'}
           end
           describe_return "A transfer of 5 USD from Account with 50 USD") do
             it { should be_kind_of(TransferDSL) }
@@ -164,7 +164,7 @@ With an input like this
     static_methods do
       new(arg(:source_account) do
         given do
-          source_account = Account.new(50, 'USD')
+          arg.source_account = Account.new(50, 'USD')
         end
         describe_return("A Transfer DSL with the given source account") do
            it {subject.source_account.should  == given.source_account}
@@ -176,11 +176,13 @@ With an input like this
       to(arg(:target_account, arg(:amount), arg(:currency)) do
         scenario 'source account has enough money' do
           given do
-            target_account = Account.new(50, 'USD')
-            amount = 5
-            currency = 'USD'
-            subject = TransferDSL.new(Account.new(50, 'USD')
+            arg.target_account = Account.new(50, 'USD')
+            arg.amount = 5
+            arg.currency = 'USD'
+            subject{TransferDSL.new(Account.new(50, 'USD')}
           end
+
+          # the following line describes the subject's source_account method
           describe_subject(:source_account, "is an account with 45 USD") do
              it { amount.should == 45 }
              it { currency.should == 'USD' }
@@ -193,10 +195,10 @@ With an input like this
 
         scenario 'source account does NOT have enough money' do
           given do
-            target_account = Account.new(50, 'USD')
-            amount = 100
-            currency = 'USD'
-            subject = TransferDSL.new(Account.new(10, 'USD')
+            arg.target_account = Account.new(50, 'USD')
+            arg.amount = 100
+            arg.currency = 'USD'
+            subject{TransferDSL.new(Account.new(10, 'USD')}
           end
           throws(Error)
       end
