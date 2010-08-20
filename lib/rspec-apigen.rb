@@ -1,23 +1,9 @@
-require 'meta_helper'
+require 'rspec_apigen/meta_helper'
+require 'rspec_apigen/static_methods'
+require 'rspec_apigen/argument'
+require 'rspec_apigen/fixture'
 
 module RSpec::ApiGen
-
-  class Fixture
-    attr_reader :description
-    attr_reader :create_proc
-    attr_reader :destroy_proc
-    
-    def initialize(description, create_proc, destroy_proc = nil)
-      @description = description
-      @create_proc = create_proc
-      @destroy_proc = destroy_proc
-    end
-
-    def create
-      @create_proc.call
-    end
-  end
-
 
   def add_fixture(name, clazz, description=nil, &block)
     def clazz.fixture(name)
@@ -36,29 +22,6 @@ module RSpec::ApiGen
       @_fixtures ||= {}
       @_fixtures[name.to_sym] = Fixture.new(description, create_block)
     end
-  end
-
-
-  class Argument
-    attr_reader :name, :description
-    def initialize(name, description)
-      @name = name
-      @description = description
-    end
-
-    def to_s
-      "Arg #{name}"
-    end
-  end
-
-  def arg(name, description='')
-    Argument.new(name, description)
-  end
-
-
-  
-  def singleton_of(obj)
-    class << obj; self; end
   end
 
 
@@ -103,6 +66,7 @@ module RSpec::ApiGen
   end
 
   def static_method(method, param, &block)
+    puts "DEFINE METHOD #{method} on #{self}"
     args = param[:args]
     context "##{method}", describe_args(args) do
 
@@ -151,25 +115,22 @@ module RSpec::ApiGen
     "(#{args.collect { |x| x.kind_of?(Argument)? x.name : "#{x}:#{x.class}" }.join(',')})"
   end
 
-  def static_methods
+  def static_methods(&block)
     clazz = describes
-    metaclass = class << self
-      self
-    end
-    # TODO It comes in the wrong order
     describe "Public Static Methods" do
-      def_methods = clazz.methods - Object.methods + %w[new]
+      static_context = StaticMethods.new
+
+       # TODO - how do I find which methods was defined on the clazz and not inherited ?
+      def_methods = clazz.public_methods - Object.methods + %w[new]
+      current_context = self
+      puts "DEF METHODS #{def_methods}"
       def_methods.each do |meth_name|
-#        MetaHelper.create_instance_method(self, meth_name) do |*args, &example_group|
-        metaclass.send(:define_method, meth_name) do |*args, &example_group|
-          if example_group # UGLY, since we have modified wrong new method
-            static_method(meth_name, :args => args, &example_group)
-          else
-            super
-          end
+        MetaHelper.create_instance_method(static_context, meth_name) do |*args, &example_group|
+#        metaclass.send(:define_method, meth_name) do |*args, &example_group|
+         current_context.static_method(meth_name, :args => args, &example_group)
         end
       end
-      yield
+      static_context.instance_eval(&block)
     end
   end
 

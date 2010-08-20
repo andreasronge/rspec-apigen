@@ -3,7 +3,7 @@ require 'spec_helper'
 
 
 describe Account do
-
+             # jokka palm
 
   static_methods do
     new do

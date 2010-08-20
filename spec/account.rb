@@ -7,6 +7,9 @@ class Account
 #    puts "Create account #{balance} #{currency}"
   end
 
+  def self.sune
+    puts "SUNE CALLED"
+  end
   def transfer(amount, currency)
 #    puts "called transfer with #{amount} #{currency}"
     TransactionBuilder.new
