@@ -36,7 +36,7 @@ Which generates the following output
   
     2 examples, 0 failures
 
-I want to generate an API documentation something like this from an RSpec Macro DSL.
+I (also) want to generate a detailed API documentation something like this from a RSpec Macro DSL:
 
   Account
     Public Class Methods
@@ -59,7 +59,7 @@ I want to generate an API documentation something like this from an RSpec Macro 
 
     Public Instance Methods
       #transfer(amount, currency)
-         scenario 'account and currency has valid values'
+         scenario 'amount and currency has valid values'
            given amount 50
            given currency 'USD'
            given subject 'Account with 50 USD'
@@ -106,38 +106,54 @@ With an input like this
   describe Account do
     static_methods do
       new do
-        then_describe("Account with 0 USD") do # or then_describe_return
-  #        it_behaves_like "Account with 0 USD" can also be used
-          it("has #balance == 0") { subject.balance.should == 0 }
-          it("has #currency == 'USD") { subject.currency.should == 'USD' }
+        describe_returns("Account with 0 USD") do
+           # it_behaves_like "Account with 0 USD" can also be used
+           it("has #balance == 0") { subject.balance.should == 0 }
+           it("has #currency == 'USD") { subject.currency.should == 'USD' }
         end
       end
 
       # can also use the static_method instead of calling with new
-      new(arg(:amount, 50), arg(:currency, 'USD')) do
-        scenario 'account and currency has valid values'
-        then_describe("Account with 50 USD") do
-          it("has #balance == 50") { subject.balance.should == 50 }
-          it("has #currency == 'USD") { subject.currency.should == 'USD' }
-        end
-      end
+      new(arg(:amount), arg(:currency)) do
+        scenario 'account and currency has valid values' do
+          given do
+            amount   = 50
+            currency = 'USD'
+          end
 
-      new(arg(:amount, 50), arg(:currency,'UX!D')) do
-        scenario 'an unknown currency'
-        throws(Error)
+          describe_return "an Account with given amount and currency" do
+            it { balance.should == given.amount }
+            it { currency.should == given.currency }
+          end
+        end
+
+        scenario 'an unknown currency' do
+          given do
+            amount   = 50
+            currency = 'UX!'
+          end
+          throws(Error)
+        end
       end
 
     end
 
     instance_methods do
-      transfer(arg(:amount, 50), arg(:currency, 'USD')) do
-        given(Account.new(50, 'USD')) do
-          scenario 'account and currency has valid values'
-          then_describe("A transfer of 5 USD from Account with 50 USD") do
+      transfer(arg(:amount), arg(:currency)) do
+        scenario 'transfer amount and currency have valid values' do
+          given do
+            amount = 5
+            currency = 'USD'
+            subject = Account.new(50,'USD')
+          end
+          describe_return "A transfer of 5 USD from Account with 50 USD") do
             it { should be_kind_of(TransferDSL) }
           end
-          it { balance.should == 50 }
-          it { balance.should == 'USD' }
+
+          describe_subject "should not be modified" do
+            it { balance.should == 50 }
+            it { currency.should == 'USD' }
+          end
         end
       end
     end
@@ -146,27 +162,43 @@ With an input like this
 
   describe TransferDSL do
     static_methods do
-      new(arg(:source_account, Account.new(50, 'USD')) do
-        then_describe("A Transfer DSL with a source account") do
-           it {subject.source_account.balance.should  == 50}
-           it {subject.source_account.currency.should == 'USD'}
+      new(arg(:source_account) do
+        given do
+          source_account = Account.new(50, 'USD')
+        end
+        describe_return("A Transfer DSL with the given source account") do
+           it {subject.source_account.should  == given.source_account}
         end
 
     end
 
     instance_methods do
-      to(arg(:target_account, Account.new), arg(:amount, 5), arg(:currency, 'USD')) do
-        given_subject(TransferDSL.new(Account.new(50, 'USD'), 5, 'USD')) do
-          scenario 'source account has enough money'
-          then_describe(:target_account, "is an account with 5 USD") do
-             it { amount.should == 5 }
-             it { currency.should == 'USD' }
+      to(arg(:target_account, arg(:amount), arg(:currency)) do
+        scenario 'source account has enough money' do
+          given do
+            target_account = Account.new(50, 'USD')
+            amount = 5
+            currency = 'USD'
+            subject = TransferDSL.new(Account.new(50, 'USD')
           end
-          then_describe(:source_account, "is an account with 45 USD") do
+          describe_subject(:source_account, "is an account with 45 USD") do
              it { amount.should == 45 }
              it { currency.should == 'USD' }
           end
+          describe_arg(:target_account,  "is an account with 5 USD") do
+             it { amount.should == 5 }
+             it { currency.should == 'USD' }
+          end
         end
+
+        scenario 'source account does NOT have enough money' do
+          given do
+            target_account = Account.new(50, 'USD')
+            amount = 100
+            currency = 'USD'
+            subject = TransferDSL.new(Account.new(10, 'USD')
+          end
+          throws(Error)
       end
     end
 
@@ -187,8 +219,10 @@ rspec-apigen also has support for fixture
 
     instance_methods do
       # add_friend_relationship is an instance method on the Person class
-      add_friend_relationship(arg(:to_person, Person.fixture(:you)) do
-        given(:person_me)
+      add_friend_relationship(arg(:to_person)) do
+        given do
+          to_person = Person.fixture(:me)
+        end
         ...
 
 
