@@ -2,7 +2,6 @@ require 'spec_helper'
 
 
 describe Account do
-  # jokka palm
 
   static_methods do
     new do
@@ -17,6 +16,7 @@ describe Account do
     new(arg(:amount), arg(:currency)) do
       scenario 'account and currency has valid values' do
         given do
+          puts "EVAL SELF #{self}"
           arg.amount   = 50
           arg.currency = 'USD'
         end
@@ -27,8 +27,27 @@ describe Account do
         end
       end
     end
-#  end
   end
+
+#  instance_methods do
+#    transfer(arg(:amount), arg(:currency)) do
+#      scenario 'transfer amount and currency have valid values' do
+#        given do
+#          arg.amount = 5
+#          arg.currency = 'USD'
+#          subject{Account.new(50,'USD')}
+#        end
+#        describe_return "A transfer of 5 USD from Account with 50 USD" do
+#          it { should be_kind_of(TransferDSL) }
+#        end
+#
+##        describe_subject "should not be modified" do
+##          it { balance.should == 50 }
+##          it { currency.should == 'USD' }
+##        end
+#      end
+#    end
+#  end
 end
 
 

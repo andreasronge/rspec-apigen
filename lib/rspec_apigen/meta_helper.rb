@@ -6,7 +6,7 @@ module RSpec::ApiGen
       end
     end
 
-    def self.create_instance_method(obj, name, &block)
+    def self.create_singleton_method(obj, name, &block)
       singleton_of(obj).send(:define_method, name, &block)
     end
 

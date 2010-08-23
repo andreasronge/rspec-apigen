@@ -1,6 +1,6 @@
 module RSpec::ApiGen
 
-  class StaticMethods
+  class Method
     def arg(name, description='')
       Argument.new(name, description)
     end
