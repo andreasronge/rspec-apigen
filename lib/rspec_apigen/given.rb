@@ -1,6 +1,5 @@
 module RSpec::ApiGen
   class Given
-    attr_reader :subject_proc # contains the block to initialize the subject (or nil)
     attr_reader :args # contains name of argument and its value
     attr_reader :arg # the DSL object used to set the args
 
@@ -22,8 +21,7 @@ module RSpec::ApiGen
 
     # sets the subject
     def subject(&block)
-      @subject_proc = block
-      puts "subject #{self.subject_proc}"
+      block.nil? ? @subject : @subject = block
     end
   end
 end

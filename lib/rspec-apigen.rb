@@ -71,21 +71,20 @@ module RSpec::ApiGen
     # process the given block DSL
     given = Given.new(args, &given_block)
 
-    # check the DSL specified an subject proc
-    if (given.subject_proc)
-      # yes, create a new subject
-      subject_obj = given.subject_proc.call
-      puts "new subject_obj #{subject_obj}"
-    end
-      
+    # check the DSL specified an subject proc, if so create a new subject_obj
+    subject_obj = given.subject.call if given.subject
 
     # for each argument we replace the args with the real value
     args.collect! { |arg| arg.kind_of?(Argument) ? given.args[arg.name] : arg }
 
+    ret_value = nil
+    it "accept arguments: #{args.join(',')}" do
+      ret_value = subject_obj.send(method, *args)
+    end if describe_return # todo refactoring
 
     context "then returns #{describe_return[:example_desc][0]}" do
-      puts "current subject #{subject}"
-      subject { subject_obj.send(method, *args) }
+      puts "current subject #{ret_value}"
+      subject { ret_value }
 
       # create a given object which returns the given arguments
       given_obj = create_given_obj(given.args)
