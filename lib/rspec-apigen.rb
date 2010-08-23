@@ -45,7 +45,6 @@ module RSpec::ApiGen
   def run_scenario(method, args, block)
     # have we defined any scenarios ?
     MetaHelper.create_singleton_method(self, :scenario) do |*scenario_desc, &scenario_block|
-      puts "create scenario #{scenario_desc[0]}"
       context "Scenario #{scenario_desc[0]}" do
         run_scenario(method, args, scenario_block)
       end
@@ -53,7 +52,7 @@ module RSpec::ApiGen
 
     # create method to set the describe_return variable
     describe_return = nil
-    MetaHelper.create_singleton_method(self, :describe_return) do |*example_desc, &example|
+    MetaHelper.create_singleton_method(self, :returns) do |*example_desc, &example|
       describe_return = {:example => example, :example_desc => example_desc}
     end
 
@@ -73,6 +72,8 @@ module RSpec::ApiGen
 
     # check the DSL specified an subject proc, if so create a new subject_obj
     subject_obj = given.subject.call if given.subject
+    
+    subject { subject_obj }
 
     # for each argument we replace the args with the real value
     args.collect! { |arg| arg.kind_of?(Argument) ? given.args[arg.name] : arg }
@@ -83,7 +84,6 @@ module RSpec::ApiGen
     end if describe_return # todo refactoring
 
     context "then returns #{describe_return[:example_desc][0]}" do
-      puts "current subject #{ret_value}"
       subject { ret_value }
 
       # create a given object which returns the given arguments

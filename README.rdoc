@@ -106,7 +106,7 @@ With an input like this
   describe Account do
     static_methods do
       new do
-        describe_return("Account with 0 USD") do
+        returns("Account with 0 USD") do
            # it_behaves_like "Account with 0 USD" can also be used
            it("has #balance == 0") { subject.balance.should == 0 }
            it("has #currency == 'USD") { subject.currency.should == 'USD' }
@@ -121,7 +121,7 @@ With an input like this
             arg.currency = 'USD'
           end
 
-          describe_return "an Account with given amount and currency" do
+          returns "an Account with given amount and currency" do
             it { balance.should == given.amount }
             it { currency.should == given.currency }
           end
@@ -146,13 +146,13 @@ With an input like this
             arg.currency = 'USD'
             subject{Account.new(50,'USD'}
           end
-          describe_return "A transfer of 5 USD from Account with 50 USD") do
+          returns "A transfer of 5 USD from Account with 50 USD") do
             it { should be_kind_of(TransferDSL) }
           end
 
-          describe_subject "should not be modified" do
-            it { balance.should == 50 }
-            it { currency.should == 'USD' }
+          it "should not be modify subject" do
+            balance.should == 50
+            currency.should == 'USD'
           end
         end
       end
@@ -166,7 +166,7 @@ With an input like this
         given do
           arg.source_account = Account.new(50, 'USD')
         end
-        describe_return("A Transfer DSL with the given source account") do
+        returns("A Transfer DSL with the given source account") do
            it {subject.source_account.should  == given.source_account}
         end
 
