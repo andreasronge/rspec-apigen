@@ -12,7 +12,7 @@ class Account
   end
   def transfer(amount, currency)
 #    puts "called transfer with #{amount} #{currency}"
-    TransactionBuilder.new
+    TransferDSL.new(self)
   end
   def to_s
     "Account balance: #{balance} #{currency}"

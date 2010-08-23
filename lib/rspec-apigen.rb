@@ -42,19 +42,10 @@ module RSpec::ApiGen
   end
 
 
-  def execute_given_block(args, given_block)
-
-    # create a new object in which we will eval the given block
-    # this will populate the given_args variable using the created new Object as context
-    Given.new(args, &given_block)
-
-    given_obj.args
-  end
-
   def run_scenario(method, args, block)
     # have we defined any scenarios ?
     MetaHelper.create_singleton_method(self, :scenario) do |*scenario_desc, &scenario_block|
-      puts "Create Scenario Context"
+      puts "create scenario #{scenario_desc[0]}"
       context "Scenario #{scenario_desc[0]}" do
         run_scenario(method, args, scenario_block)
       end
@@ -62,8 +53,7 @@ module RSpec::ApiGen
 
     # create method to set the describe_return variable
     describe_return = nil
-    MetaHelper.create_singleton_method(self, :describe_return) do |*example_desc,
-            &example|
+    MetaHelper.create_singleton_method(self, :describe_return) do |*example_desc, &example|
       describe_return = {:example => example, :example_desc => example_desc}
     end
 
@@ -72,24 +62,30 @@ module RSpec::ApiGen
     MetaHelper.create_singleton_method(self, :given) { |&b| given_block = b }
 
     # eval and set the given_block and describe_return variables
-    clazz = describes
     self.instance_eval(&block)
 
-    # if we have a given block then we can get the given arguments values
+    # create the subject which we will test with the given method,
+    # unless specified in a given DSL block use as default the same as the one described in the DSL
+    subject_obj = describes
+
+    # process the given block DSL
     given = Given.new(args, &given_block)
-    if (given.subject)
-      puts "init with new subject"
-      subject &given.subject
-    else
-      puts "no subject"
-      subject { clazz }
+
+    # check the DSL specified an subject proc
+    if (given.subject_proc)
+      # yes, create a new subject
+      subject_obj = given.subject_proc.call
+      puts "new subject_obj #{subject_obj}"
     end
+      
 
     # for each argument we replace the args with the real value
     args.collect! { |arg| arg.kind_of?(Argument) ? given.args[arg.name] : arg }
 
+
     context "then returns #{describe_return[:example_desc][0]}" do
-      subject { clazz.send(method, *args) }
+      puts "current subject #{subject}"
+      subject { subject_obj.send(method, *args) }
 
       # create a given object which returns the given arguments
       given_obj = create_given_obj(given.args)
@@ -120,6 +116,8 @@ module RSpec::ApiGen
       # TODO - how do I find which methods was defined on the clazz and not inherited ?
       def_methods = clazz.public_methods - Object.methods + %w[new]
       current_context = self
+
+      # add methods on the context - one for each public static method
       def_methods.each do |meth_name|
         MetaHelper.create_singleton_method(static_context, meth_name) do |*args, &example_group|
           current_context.create_scenarios_for(meth_name, :args => args, &example_group)
