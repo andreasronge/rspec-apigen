@@ -12,7 +12,6 @@ describe Account do
       end
     end
 
-    # can also use the static_method instead of calling with new
     new(arg(:amount), arg(:currency)) do
       scenario 'account and currency has valid values' do
         given do
@@ -38,12 +37,15 @@ describe Account do
         end
         returns "A transfer of 5 USD from Account with 50 USD" do
           it { should be_kind_of(TransferDSL) }
+          it ("source account should == given account") do
+            subject.source_account.balance.should == given.subject.balance
+          end
         end
 
         it "should not change the source account" do
           subject.balance.should == 50
         end
-        
+
 #
 #        describe_subject "should not be modified" do
 #          it { balance.should == 50 }

@@ -28,20 +28,6 @@ module RSpec::ApiGen
   end
 
 
-  def create_given_obj(given_args)
-    given_obj = Object.new
-    given_args.each_pair do |key, value|
-      # create a reader method on the given obj
-      MetaHelper.create_singleton_method(given_obj, key) { value }
-    end
-    MetaHelper.create_singleton_method(given_obj, :method_missing) do |meth|
-      fail("Tried to get an undefined given argument #{meth}")
-    end
-
-    given_obj
-  end
-
-
   def run_scenario(method, args, block)
     # have we defined any scenarios ?
     MetaHelper.create_singleton_method(self, :scenario) do |*scenario_desc, &scenario_block|
@@ -64,33 +50,38 @@ module RSpec::ApiGen
     self.instance_eval(&block)
 
     # create the subject which we will test with the given method,
-    # unless specified in a given DSL block use as default the same as the one described in the DSL
-    subject_obj = describes
-
-    # process the given block DSL
-    given = Given.new(args, &given_block)
+    # if there is no given subject in the DSL then it will default to the create a proc for creating a class
+    # which will be used to test static methods.
+    # If there given proc then it will return an instance of the instance under test and call an instance methods
+    # which we will test
+    given = Given.new(args, describes, &given_block)
 
     # check the DSL specified an subject proc, if so create a new subject_obj
-    subject_obj = given.subject.call if given.subject
-    
-    subject { subject_obj }
+    subject &given.subject_proc
 
     # for each argument we replace the args with the real value
     args.collect! { |arg| arg.kind_of?(Argument) ? given.args[arg.name] : arg }
 
     ret_value = nil
     it "accept arguments: #{args.join(',')}" do
-      ret_value = subject_obj.send(method, *args)
+      # create a new subject
+      subj = given.subject
+      # call the method on this instance which will will test
+      ret_value = subj.send(method, *args)
     end if describe_return # todo refactoring
 
+
     context "then returns #{describe_return[:example_desc][0]}" do
+      
       subject { ret_value }
 
-      # create a given object which returns the given arguments
-      given_obj = create_given_obj(given.args)
-      # add a method given
-      MetaHelper.create_singleton_method(self, :given) { given_obj }
+      self.send(:define_method, "given") do
+        given  
+      end
 
+#      puts "returns context #{self.methods.sort.join(", ")} "
+#      puts "example #{self.example}"
+#            puts "examples #{self.examples}"
       # run the example in the describe_return block
       self.instance_eval(&describe_return[:example])
     end if describe_return
