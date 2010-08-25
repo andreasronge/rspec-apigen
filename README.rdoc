@@ -104,69 +104,60 @@ I (also) want to generate a detailed API documentation something like this from 
 With an input like this
 
   describe Account do
+
     static_methods do
       new do
-        returns("Account with 0 USD") do
-           # it_behaves_like "Account with 0 USD" can also be used
-           it("has #balance == 0") { subject.balance.should == 0 }
-           it("has #currency == 'USD") { subject.currency.should == 'USD' }
+        Return("Account with 0 USD") do
+          # it_behaves_like "Account with 0 USD" can also be used
+          it("has #balance == 0") { subject.balance.should == 0 }
+          it("has #currency == 'USD") { subject.currency.should == 'USD' }
         end
       end
 
-      # can also use the static_method instead of calling with new
       new(arg(:amount), arg(:currency)) do
-        scenario 'account and currency has valid values' do
-          given do
+        Scenario 'account and currency has valid values' do
+          Given do
             arg.amount   = 50
             arg.currency = 'USD'
           end
 
-          returns "an Account with given amount and currency" do
-            it { balance.should == given.amount }
-            it { currency.should == given.currency }
+          Return "an Account with given amount and currency" do
+            it { subject.balance.should == 50 } #given.amount }
+            it { subject.currency.should == 'USD' } # given.currency }
           end
-        end
-
-        scenario 'an unknown currency' do
-          given do
-            arg.amount   = 50
-            arg.currency = 'UX!'
-          end
-          throws(Error)
         end
       end
-
     end
 
     instance_methods do
       transfer(arg(:amount), arg(:currency)) do
-        scenario 'transfer amount and currency have valid values' do
-          given do
+  #      Description 'bla bla bla'
+        Scenario 'transfer amount and currency have valid values' do
+          Given do
             arg.amount = 5
             arg.currency = 'USD'
-            subject{Account.new(50,'USD'}
+            subject { Account.new(50, 'USD') }
           end
-          returns "A transfer of 5 USD from Account with 50 USD") do
+          Return "A transfer of 5 USD from Account with 50 USD" do
             it { should be_kind_of(TransferDSL) }
           end
-
-          it "should not be modify subject" do
-            balance.should == 50
-            currency.should == 'USD'
+          Then do
+           it "should not change subject" do
+              subject.balance.should == given.subject.balance
+            end
           end
         end
       end
     end
-
   end
 
   describe TransferDSL do
     static_methods do
       new(arg(:source_account) do
-        given do
+        Given do
           arg.source_account = Account.new(50, 'USD')
         end
-        returns("A Transfer DSL with the given source account") do
+        Returns("A Transfer DSL with the given source account") do
            it {subject.source_account.should  == given.source_account}
         end
 
@@ -174,8 +165,8 @@ With an input like this
 
     instance_methods do
       to(arg(:target_account, arg(:amount), arg(:currency)) do
-        scenario 'source account has enough money' do
-          given do
+        Scenario 'source account has enough money' do
+          Given do
             arg.target_account = Account.new(50, 'USD')
             arg.amount = 5
             arg.currency = 'USD'
@@ -183,24 +174,19 @@ With an input like this
           end
 
           # the following line describes the subject's source_account method
-          describe_subject(:source_account, "is an account with 45 USD") do
-             it { amount.should == 45 }
-             it { currency.should == 'USD' }
-          end
-          describe_arg(:target_account,  "is an account with 5 USD") do
-             it { amount.should == 5 }
-             it { currency.should == 'USD' }
+          Then "it added money to the target account" do
+             it { subject.target_account.amount.should == given.arg.source_account.amount + given.arg.amount }
           end
         end
 
-        scenario 'source account does NOT have enough money' do
-          given do
+        Scenario 'source account does NOT have enough money' do
+          Given do
             arg.target_account = Account.new(50, 'USD')
             arg.amount = 100
             arg.currency = 'USD'
             subject{TransferDSL.new(Account.new(10, 'USD')}
           end
-          throws(Error)
+          Throws(Error)
       end
     end
 

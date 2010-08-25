@@ -30,7 +30,7 @@ module RSpec::ApiGen
 
   def run_scenario(method, args, block)
     # have we defined any scenarios ?
-    MetaHelper.create_singleton_method(self, :scenario) do |*scenario_desc, &scenario_block|
+    MetaHelper.create_singleton_method(self, :Scenario) do |*scenario_desc, &scenario_block|
       context "Scenario #{scenario_desc[0]}" do
         run_scenario(method, args, scenario_block)
       end
@@ -38,16 +38,26 @@ module RSpec::ApiGen
 
     # create method to set the describe_return variable
     describe_return = nil
-    MetaHelper.create_singleton_method(self, :returns) do |*example_desc, &example|
+    MetaHelper.create_singleton_method(self, :Return) do |*example_desc, &example|
       describe_return = {:example => example, :example_desc => example_desc}
     end
 
     # create method to set the given_block variable
     given_block = nil
-    MetaHelper.create_singleton_method(self, :given) { |&b| given_block = b }
+    MetaHelper.create_singleton_method(self, :Given) { |&b| given_block = b }
+
+
+    # create method to set the given_block variable
+    then_block = nil
+    then_desc  = nil
+    MetaHelper.create_singleton_method(self, :Then) { |*desc, &b| then_block = b; then_desc = desc[0] if desc.size > 0}
 
     # eval and set the given_block and describe_return variables
     self.instance_eval(&block)
+
+
+    #  if there are no then_block or describe_return then there is nothing to do
+    return if describe_return.nil? && then_block.nil?
 
     # create the subject which we will test with the given method,
     # if there is no given subject in the DSL then it will default to the create a proc for creating a class
@@ -63,28 +73,30 @@ module RSpec::ApiGen
     args.collect! { |arg| arg.kind_of?(Argument) ? given.args[arg.name] : arg }
 
     ret_value = nil
+
+
+    context "Given" do
     it "accept arguments: #{args.join(',')}" do
       # create a new subject
       subj = given.subject
       # call the method on this instance which will will test
       ret_value = subj.send(method, *args)
-    end if describe_return # todo refactoring
+    end 
 
+    end
 
-    context "then returns #{describe_return[:example_desc][0]}" do
-      
-      subject { ret_value }
-
+    context "Then #{then_desc}" do
       self.send(:define_method, "given") do
-        given  
+        given
       end
+      context "Return #{describe_return[:example_desc][0]}" do
+        subject { ret_value }
 
-#      puts "returns context #{self.methods.sort.join(", ")} "
-#      puts "example #{self.example}"
-#            puts "examples #{self.examples}"
-      # run the example in the describe_return block
-      self.instance_eval(&describe_return[:example])
-    end if describe_return
+        self.instance_eval(&describe_return[:example])
+      end if describe_return
+
+      self.instance_eval(&then_block) if then_block
+    end
   end
 
   def create_scenarios_for(method, param, &block)
