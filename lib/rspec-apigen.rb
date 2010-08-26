@@ -53,7 +53,6 @@ module RSpec::ApiGen
 
     ret_value = nil
 
-
     after(:each) do
       given.clean_up
     end
@@ -68,6 +67,7 @@ module RSpec::ApiGen
 
     end
 
+    # todo should be possible to have several Then
     context "Then #{then_desc}" do
       self.send(:define_method, "given") { given }
       context "Return #{describe_return[:example_desc][0]}" do

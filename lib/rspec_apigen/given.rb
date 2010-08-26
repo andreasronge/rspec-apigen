@@ -32,6 +32,7 @@ module RSpec::ApiGen
       @expectation_values = {}
       @destroy_procs.each {|x| x.call}
       @destroy_procs = []
+      @subject_value = nil
     end
         
     # construct a new value for use in caller argument
@@ -47,6 +48,18 @@ module RSpec::ApiGen
       ret
     end
 
+    def create_subject
+      if @subject_value
+        @subject_value
+      elsif @subject_fixture
+        @subject_value = @subject_fixture.create
+        @destroy_procs << Proc.new { @subject_fixture.destroy_proc.call(@subject_value) }
+        @subject_value
+      else
+        @subject_proc.call
+      end
+    end
+
 
     # construct a new or reuse an already constructed value to be used to verify and compare the
     # result after calling the method we want to test
@@ -57,7 +70,13 @@ module RSpec::ApiGen
     # Sets the new subject_proc if a block is given
     # else returns a new subject by calling the subject_proc
     def subject(&block)
-      block.nil? ? @subject_proc.call : @subject_proc = block
+      block.nil? ? create_subject : @subject_proc = block
+    end
+
+    def subject=(fixture)
+      unless fixture.respond_to?(:create) && fixture.respond_to?(:destroy)
+        raise "Only allowed to set subject to a fixture (unless a block is provided)"
+      @subject_fixture = fixture
     end
 
     def subject_proc

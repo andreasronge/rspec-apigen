@@ -6,7 +6,7 @@ class TransferDSL
     @source_account = account
   end
   
-  def to(account)
+  def to(target_account)
 
   end
 end
