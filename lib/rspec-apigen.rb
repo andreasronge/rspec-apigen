@@ -3,30 +3,9 @@ require 'rspec_apigen/method'
 require 'rspec_apigen/argument'
 require 'rspec_apigen/fixture'
 require 'rspec_apigen/given'
+require 'rspec_apigen/extensions/kernel'
 
 module RSpec::ApiGen
-
-  def add_fixture(name, clazz, description=nil, &block)
-    def clazz.fixture(name)
-      @_fixtures[name.to_sym]
-    end unless clazz.respond_to?(:fixture)
-
-    dsl = Object.new
-    dsl_meta = class << dsl;
-      self;
-    end
-    create_block = nil
-    dsl_meta.send(:define_method, :create) do |&b|
-      create_block = b
-    end
-    dsl.instance_eval &block
-
-    clazz.instance_eval do
-      @_fixtures ||= {}
-      @_fixtures[name.to_sym] = Fixture.new(description, create_block)
-    end
-  end
-
 
   def run_scenario(method, args, block)
     # have we defined any scenarios ?
@@ -66,11 +45,11 @@ module RSpec::ApiGen
     # which we will test
     given = Given.new(args, describes, &given_block)
 
-    # check the DSL specified an subject proc, if so create a new subject_obj
+    # create a new subject
     subject &given.subject_proc
 
     # for each argument we replace the args with the real value
-    args.collect! { |arg| arg.kind_of?(Argument) ? given.args[arg.name] : arg }
+    args.collect! { |arg| arg.kind_of?(Argument) ? given.call_value(arg.name) : arg }
 
     ret_value = nil
 
@@ -86,9 +65,7 @@ module RSpec::ApiGen
     end
 
     context "Then #{then_desc}" do
-      self.send(:define_method, "given") do
-        given
-      end
+      self.send(:define_method, "given") { given }
       context "Return #{describe_return[:example_desc][0]}" do
         subject { ret_value }
 

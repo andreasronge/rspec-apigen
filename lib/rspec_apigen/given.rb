@@ -12,12 +12,39 @@ module RSpec::ApiGen
       @subject_proc = Proc.new { default_given_subject }
       args = @args # so we can access it under closure
 
+      this = self
       list_of_args.find_all { |a| a.kind_of?(Argument) }.each do |arg|
         MetaHelper.create_singleton_method(@arg, "#{arg.name}=") do |val|
           args[arg.name] = val
         end
+        MetaHelper.create_singleton_method(@arg, "#{arg.name}") do
+          this.expectation_value(arg.name)
+        end
       end
       self.instance_eval(&block) if block
+      @destroy_procs = []
+      @call_values = {}
+      @expectation_values = {}
+    end
+
+    # construct a new value for use in caller argument
+    def call_value(arg_name)
+      @call_values[arg_name] ||= create_value(arg_name)
+    end
+
+
+    def create_value(arg_name)
+      val = @args[arg_name]
+      ret = val.respond_to?(:create) ? val.create : val
+      @destroy_procs << Proc.new{val.destroy.call(ret)} if val.respond_to?(:destroy)
+      ret
+    end
+
+
+    # construct a new or reuse an already constructed value to be used to verify and compare the
+    # result after calling the method we want to test
+    def expectation_value(arg_name)
+      @expectation_values[arg_name] ||= create_value(arg_name)
     end
 
     # Sets the new subject_proc if a block is given
