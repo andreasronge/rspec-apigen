@@ -5,11 +5,13 @@ describe TransferDSL do
 
   Account.fixture(:USD_50, "Account with 50 USD") do
     create { Account.new(50, 'USD')}
+    destroy {|x| puts "Destroy #{x}"}
   end
 
 
   TransferDSL.fixture(:transfer_dsl, 'A transfer of 5 USD from Account with 50 USD') do
     create { TransferDSL.new(Account.fixture(:USD_50)) }
+    destroy {|x| puts "Destroy #{x}"}
   end
 
 

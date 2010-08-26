@@ -27,6 +27,13 @@ module RSpec::ApiGen
       @expectation_values = {}
     end
 
+    def clean_up
+      @call_values = {}
+      @expectation_values = {}
+      @destroy_procs.each {|x| x.call}
+      @destroy_procs = []
+    end
+        
     # construct a new value for use in caller argument
     def call_value(arg_name)
       @call_values[arg_name] ||= create_value(arg_name)
@@ -36,7 +43,7 @@ module RSpec::ApiGen
     def create_value(arg_name)
       val = @args[arg_name]
       ret = val.respond_to?(:create) ? val.create : val
-      @destroy_procs << Proc.new{val.destroy.call(ret)} if val.respond_to?(:destroy)
+      @destroy_procs << Proc.new{val.destroy_proc.call(ret)} if val.respond_to?(:destroy) && val.destroy_proc
       ret
     end
 

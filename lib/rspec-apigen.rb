@@ -54,6 +54,10 @@ module RSpec::ApiGen
     ret_value = nil
 
 
+    after(:each) do
+      given.clean_up
+    end
+
     context "Given" do
     it "accept arguments: #{args.join(',')}" do
       # create a new subject
