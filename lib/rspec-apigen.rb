@@ -36,6 +36,9 @@ module RSpec::ApiGen
     MetaHelper.create_singleton_method(self, :Given) { |&b| given_block = b }
 
 
+    MetaHelper.create_singleton_method(self, :Description) { |desc| context(desc){} }
+    
+
     # create method to set the given_block variable
     then_block = nil
     then_desc  = nil
@@ -49,6 +52,7 @@ module RSpec::ApiGen
 
     given = nil
     context "Given" do
+
       given = Given.new(self, method, args, &given_block)
     end 
 
