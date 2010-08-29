@@ -37,71 +37,54 @@ Which generates the following output
     2 examples, 0 failures
 
 I (also) want to generate a detailed API documentation something like this from a RSpec Macro DSL:
-
   Account
-    Public Class Methods
-      #new()
-        then return value: Account with 0 USD
-           has #balance == 0
-           has #currency == 'USD'
-      #new(amount, currency)
-         scenario 'account and currency has valid values'
-           given amount 50
-           given currency 'USD'
-           then returns "Account with 50 USD"
-             has #amount == 50
-             has #currency == 'USD'
-
-         scenario 'an unknown currency'
-           given amount 50
-           given currency QD!
-           then subject throws an exception
-
+    Public Static Methods
+      #new ()
+        Given
+          no arguments
+        Then
+          Return Account with 0 USD
+            has #balance == 0
+            has #currency == 'USD
+      #new (amount,currency)
+        Scenario account and currency has valid values
+          Given
+            arguments 50, USD
+          Then
+            Return an Account with given amount and currency
+              should == 50
+              should == "USD"
     Public Instance Methods
-      #transfer(amount, currency)
-         scenario 'amount and currency has valid values'
-           given amount 50
-           given currency 'USD'
-           given subject 'Account with 50 USD'
-           then return value: A transfer of 5 USD from Account with 50 USD
-             has #target_account == nil
-             is kind of TransactionBuilder
-           then subject should not be modified
-             has #amount == 50
-             has #currency == 'USD'
-
-         scenario 'account has to little money'
-           given amount 50
-           given currency 'USD'
-           then subject throws an exception
+      #transfer (amount,currency)
+        Scenario transfer amount and currency have valid values
+          Given
+            arguments 5, USD
+          Then
+            should not change subject
+            Return A transfer of 5 USD from Account with 50 USD
+              should be a kind of TransferDSL
+  Finished in 0.00412 seconds
+  9 examples, 0 failures
 
   TransferDSL
-    Public Class Methods
-      #new(source_account, amount, currency)
-         given source_account Account with 50 USD
-         given amount 50
-         given currency 'USD'
-         then return value: A transfer of 5 USD from Account with 50 USD
-           has #amount == 50
-           has #currency == 'USD'
-           has #source_account == "Account with 50 USD"
-
+    Public Static Methods
+      #new (source_account,amount,currency)
+        Given
+          arguments Account balance: 50 USD, 5, USD
+        Then
+          Return An TransferDSL instance with initialized source account, amount and currency
+            should == 50
     Public Instance Methods
-      #to(target_account)
-         scenario 'source account has enough money'
-           given target_account: Account with 0 USD
-           given subject: A transfer of 5 USD from Account with 50 USD
-           then target_account is an Account with 5 USD
-             has amount 50
-             has currency 'USD'
-           then subject#source_account Source Account with 45 USD
-             has amount 45
-             has currency 'USD'
+      #to (target_account)
+        Given
+          arguments Account balance: 10 USD
+        Then it should add money on the target account
+          should add money to the target account
 
-         scenario 'source account does not have enough money'
-           ...
+  Finished in 0.00225 seconds
+  4 examples, 0 failures
 
-With an input like this
+The above is generated from the following RSpec file:
 
   describe Account do
 
@@ -133,23 +116,24 @@ With an input like this
       transfer(arg(:amount), arg(:currency)) do
   #      Description 'bla bla bla'
         Scenario 'transfer amount and currency have valid values' do
+          subject { Account.new(50, 'USD') }
           Given do
             arg.amount = 5
             arg.currency = 'USD'
-            subject { Account.new(50, 'USD') }
           end
           Return "A transfer of 5 USD from Account with 50 USD" do
             it { should be_kind_of(TransferDSL) }
           end
           Then do
            it "should not change subject" do
-              subject.balance.should == given.subject.balance
+              given.subject.balance.should == subject.balance
             end
           end
         end
       end
     end
   end
+
 
   describe TransferDSL do
     static_methods do
@@ -193,29 +177,8 @@ With an input like this
   end
 
 
-rspec-apigen also has support for fixture
-  describe Person
-    add_fixture(:me) do
-      create{ Person.new("me")}
-      destroy {}
-    end
-    add_fixture(:you) do
-       create { Person.new("you") }
-       destroy{}
-    end
-
-
-    instance_methods do
-      # add_friend_relationship is an instance method on the Person class
-      add_friend_relationship(arg(:to_person)) do
-        given do
-          to_person = Person.fixture(:me)
-        end
-        ...
-
-
-
-A future goal is to merge the RDoc with the output of rspec-apigen, not sure how ...
+TODO: I will implement a new RSpec HTML formatter which will generate something similar to RDoc. I want
+to write specification in my rspec code instead of using RDoc.
 
 
 === Example
