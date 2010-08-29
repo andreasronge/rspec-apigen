@@ -47,12 +47,11 @@ module RSpec::ApiGen
     # eval and set the given_block and describe_return variables
     self.instance_eval(&block)
 
-    #  if there are no then_block or describe_return then there is nothing to do
+    # if there are no then_block or describe_return then there is nothing to do
     return if describe_return.nil? && then_block.nil?
 
     given = nil
     context "Given" do
-
       given = Given.new(self, method, args, &given_block)
     end 
 
@@ -116,5 +115,29 @@ module RSpec::ApiGen
       end
       meth_ctx.instance_eval(&block)
     end
+  end
+
+  def instance_module_methods(&block)
+    clazz = describes
+    raise "instance_module_methods should only be used for modules #{clazz} is not a module" unless clazz.class == Module
+    describe "Public Instance Module Methods" do
+      subject do
+        x = Class.new
+        x.send(:include, clazz)
+        x.new
+      end
+      meth_ctx = Method.new
+
+      # TODO - how do I find which methods was defined on the clazz and not inherited ?
+      def_methods = clazz.public_instance_methods - Object.public_instance_methods
+      current_context = self
+      def_methods.each do |meth_name|
+        MetaHelper.create_singleton_method(meth_ctx, meth_name) do |*args, &example_group|
+          current_context.create_scenarios_for(meth_name, :args => args, &example_group)
+        end
+      end
+      meth_ctx.instance_eval(&block)
+    end
+
   end
 end

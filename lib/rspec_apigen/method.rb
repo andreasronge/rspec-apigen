@@ -4,6 +4,11 @@ module RSpec::ApiGen
     def arg(name, description='')
       Argument.new(name, description)
     end
+
+    def arg_block(name, description='')
+      Argument.new(name, description, true)
+    end
+
   end
   
 end

@@ -12,14 +12,20 @@ module RSpec::ApiGen
       this = self # so we can access it as closure
       @arg = Object.new
       @args = {}
-      
+      block_arg = nil
       context.it "no arguments" do
         list_of_args.find_all { |a| a.kind_of?(Argument) }.each do |a|
           MetaHelper.create_singleton_method(this.arg, "#{a.name}=") do |val|
             this.args[a.name] = val
           end
-          MetaHelper.create_singleton_method(this.arg, "#{a.name}") do
-            this.args[a.name]
+          if (a.accept_block?)
+            MetaHelper.create_singleton_method(this.arg, "#{a.name}") do | &block |
+              block_arg = block
+            end
+          else
+            MetaHelper.create_singleton_method(this.arg, "#{a.name}") do
+              this.args[a.name]
+            end
           end
         end
 
@@ -27,6 +33,8 @@ module RSpec::ApiGen
         MetaHelper.create_singleton_method(self, :arg) { this.arg }
         self.instance_eval &block if block
 
+        list_of_args.delete_if {|a| a.kind_of?(Argument) && a.accept_block?}
+        
         # now, the args hash should have been populated
         # for each param we replace the args with the real value
         list_of_args.collect! { |a| a.kind_of?(Argument) ? this.args[a.name] : a }
@@ -36,8 +44,12 @@ module RSpec::ApiGen
         # get the subject which we will use to test the method on, and store it so we can check it
         this.subject = subject
 
-        # call the method on this instance which will will test
-        this.return = this.subject.send(method, *list_of_args)
+        if (block_arg)
+          # call the method on this instance which will will test
+          this.return = this.subject.send(method, *list_of_args, &block_arg)
+        else
+          this.return = this.subject.send(method, *list_of_args)
+        end
       end
     end
 
