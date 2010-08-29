@@ -2,85 +2,49 @@ module RSpec::ApiGen
   class Given
     attr_reader :args # contains name of argument and its value
     attr_reader :arg # the DSL object used to set the args
+    attr_accessor :subject
+    attr_accessor :return
 
     # list_of_args - the list of arguments current method accept
     # When the given block is evaluated in this method
     # the Given#args will return a hash of name or argument and its value.
-    def initialize(list_of_args, default_given_subject, &block)
-      @args = {}
+    def initialize(context, method, list_of_args, &block)
+      this = self # so we can access it as closure
       @arg = Object.new
-      @subject_proc = Proc.new { default_given_subject }
-      args = @args # so we can access it under closure
-
-      this = self
-      list_of_args.find_all { |a| a.kind_of?(Argument) }.each do |arg|
-        MetaHelper.create_singleton_method(@arg, "#{arg.name}=") do |val|
-          args[arg.name] = val
+      @args = {}
+      
+      context.it "no arguments" do
+        list_of_args.find_all { |a| a.kind_of?(Argument) }.each do |a|
+          MetaHelper.create_singleton_method(this.arg, "#{a.name}=") do |val|
+            this.args[a.name] = val
+          end
+          MetaHelper.create_singleton_method(this.arg, "#{a.name}") do
+            this.args[a.name]
+          end
         end
-        MetaHelper.create_singleton_method(@arg, "#{arg.name}") do
-          this.expectation_value(arg.name)
-        end
-      end
-      self.instance_eval(&block) if block
-      @destroy_procs = []
-      @call_values = {}
-      @expectation_values = {}
-    end
 
-    def clean_up
-      @call_values = {}
-      @expectation_values = {}
-      @destroy_procs.each {|x| x.call}
-      @destroy_procs = []
-      @subject_value = nil
-    end
-        
-    # construct a new value for use in caller argument
-    def call_value(arg_name)
-      @call_values[arg_name] ||= create_value(arg_name)
-    end
+        # create the arguments
+        MetaHelper.create_singleton_method(self, :arg) { this.arg }
+        self.instance_eval &block if block
 
+        # now, the args hash should have been populated
+        # for each param we replace the args with the real value
+        list_of_args.collect! { |a| a.kind_of?(Argument) ? this.args[a.name] : a }
 
-    def create_value(arg_name)
-      val = @args[arg_name]
-      ret = val.respond_to?(:create) ? val.create : val
-      @destroy_procs << Proc.new{val.destroy_proc.call(ret)} if val.respond_to?(:destroy) && val.destroy_proc
-      ret
-    end
+        example.metadata[:description] = "arguments #{list_of_args.join(', ')}" unless list_of_args.empty?
 
-    def create_subject
-      if @subject_value
-        @subject_value
-      elsif @subject_fixture
-        @subject_value = @subject_fixture.create
-        @destroy_procs << Proc.new { @subject_fixture.destroy_proc.call(@subject_value) }
-        @subject_value
-      else
-        @subject_proc.call
+        # get the subject which we will use to test the method on, and store it so we can check it
+        this.subject = subject
+
+        # call the method on this instance which will will test
+        this.return = this.subject.send(method, *list_of_args)
       end
     end
 
-
-    # construct a new or reuse an already constructed value to be used to verify and compare the
-    # result after calling the method we want to test
-    def expectation_value(arg_name)
-      @expectation_values[arg_name] ||= create_value(arg_name)
-    end
-
-    # Sets the new subject_proc if a block is given
-    # else returns a new subject by calling the subject_proc
-    def subject(&block)
-      block.nil? ? create_subject : @subject_proc = block
-    end
-
-    def subject=(fixture)
-      unless fixture.respond_to?(:create) && fixture.respond_to?(:destroy)
-        raise "Only allowed to set subject to a fixture (unless a block is provided)"
-      @subject_fixture = fixture
-    end
-
-    def subject_proc
-      @subject_proc
-    end
   end
+
+  def describe_args(args)
+    "(#{args.collect { |x| x.kind_of?(Argument) ? x.name : "#{x}:#{x.class}" }.join(',')})"
+  end
+
 end

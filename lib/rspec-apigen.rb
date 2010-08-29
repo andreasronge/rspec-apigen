@@ -3,9 +3,19 @@ require 'rspec_apigen/method'
 require 'rspec_apigen/argument'
 require 'rspec_apigen/fixture'
 require 'rspec_apigen/given'
-require 'rspec_apigen/extensions/kernel'
 
 module RSpec::ApiGen
+
+  def fixture(name,desc=nil, &block)
+    before(:all) do
+      val = instance_eval(&block)
+      self.class.send(:class_variable_set, "@@#{name}".to_sym, val)
+    end
+
+    let(name) do
+      self.class.send(:class_variable_get, "@@#{name}".to_sym)
+    end
+  end
 
   def run_scenario(method, args, block)
     # have we defined any scenarios ?
@@ -34,44 +44,23 @@ module RSpec::ApiGen
     # eval and set the given_block and describe_return variables
     self.instance_eval(&block)
 
-
     #  if there are no then_block or describe_return then there is nothing to do
     return if describe_return.nil? && then_block.nil?
 
-    # create the subject which we will test with the given method,
-    # if there is no given subject in the DSL then it will default to the create a proc for creating a class
-    # which will be used to test static methods.
-    # If there given proc then it will return an instance of the instance under test and call an instance methods
-    # which we will test
-    given = Given.new(args, describes, &given_block)
-
-    # create a new subject
-    subject &given.subject_proc
-
-    # for each argument we replace the args with the real value
-    args.collect! { |arg| arg.kind_of?(Argument) ? given.call_value(arg.name) : arg }
-
-    ret_value = nil
-
-    after(:each) do
-      given.clean_up
-    end
-
+    given = nil
     context "Given" do
-    it "accept arguments: #{args.join(',')}" do
-      # create a new subject
-      subj = given.subject
-      # call the method on this instance which will will test
-      ret_value = subj.send(method, *args)
+      given = Given.new(self, method, args, &given_block)
     end 
-
-    end
 
     # todo should be possible to have several Then
     context "Then #{then_desc}" do
-      self.send(:define_method, "given") { given }
+      self.send(:define_method, :given) { given }
+      self.send(:define_method, :arg) { given.arg }
+      # use the same subject as we used when calling the method on it in the given block
+      #      self.send(:define_method, :subject) { given.subject }
+
       context "Return #{describe_return[:example_desc][0]}" do
-        subject { ret_value }
+        subject { given.return }
 
         self.instance_eval(&describe_return[:example])
       end if describe_return
@@ -87,9 +76,6 @@ module RSpec::ApiGen
     end
   end
 
-  def describe_args(args)
-    "(#{args.collect { |x| x.kind_of?(Argument) ? x.name : "#{x}:#{x.class}" }.join(',')})"
-  end
 
   def static_methods(&block)
     clazz = describes
@@ -103,6 +89,7 @@ module RSpec::ApiGen
       # add methods on the context - one for each public static method
       def_methods.each do |meth_name|
         MetaHelper.create_singleton_method(static_context, meth_name) do |*args, &example_group|
+          current_context.subject { clazz }
           current_context.create_scenarios_for(meth_name, :args => args, &example_group)
         end
       end

@@ -7,13 +7,10 @@ class Account
 #    puts "Create account #{balance} #{currency}"
   end
 
-  def self.sune
-    puts "SUNE CALLED"
-  end
   def transfer(amount, currency)
-#    puts "called transfer with #{amount} #{currency}"
-    TransferDSL.new(self)
+    TransferDSL.new(self, amount, currency)
   end
+
   def to_s
     "Account balance: #{balance} #{currency}"
   end

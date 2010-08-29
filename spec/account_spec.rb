@@ -31,17 +31,17 @@ describe Account do
     transfer(arg(:amount), arg(:currency)) do
 #      Description 'bla bla bla'
       Scenario 'transfer amount and currency have valid values' do
+        subject { Account.new(50, 'USD') }
         Given do
           arg.amount = 5
           arg.currency = 'USD'
-          subject { Account.new(50, 'USD') }
         end
         Return "A transfer of 5 USD from Account with 50 USD" do
           it { should be_kind_of(TransferDSL) }
         end
         Then do
           it "should not change subject" do
-            subject.balance.should == given.subject.balance
+            given.subject.balance.should == subject.balance
           end
         end
       end
