@@ -5,10 +5,20 @@ module RSpec::ApiGen
     attr_accessor :subject
     attr_accessor :return
 
+    def set_backtrace(example, e, given_caller)
+#      e.backtrace.each { |line| puts "LINE #{line}" }
+#      given_caller.each { |line| puts "given_caller #{line}" }
+      bt = given_caller.unshift(e.backtrace.first)
+      e.set_backtrace(bt)
+      example.set_exception(e)
+      example.execution_result[:exception_encountered] = bt
+    end
+
     # list_of_args - the list of arguments current method accept
     # When the given block is evaluated in this method
     # the Given#args will return a hash of name or argument and its value.
-    def initialize(context, method, list_of_args, &block)
+
+    def initialize(context, method, list_of_args, given_caller, &block)
       this = self # so we can access it as closure
       @arg = Object.new
       @args = {}
@@ -31,10 +41,15 @@ module RSpec::ApiGen
 
         # create the arguments
         MetaHelper.create_singleton_method(self, :arg) { this.arg }
-        self.instance_eval &block if block
 
-        list_of_args.delete_if {|a| a.kind_of?(Argument) && a.accept_block?}
-        
+        begin
+          self.instance_eval &block
+        rescue Exception => e
+          this.set_backtrace(example, e, given_caller)
+        end if block
+
+        list_of_args.delete_if { |a| a.kind_of?(Argument) && a.accept_block? }
+
         # now, the args hash should have been populated
         # for each param we replace the args with the real value
         list_of_args.collect! { |a| a.kind_of?(Argument) ? this.args[a.name] : a }
@@ -48,15 +63,15 @@ module RSpec::ApiGen
           # call the method on this instance which will will test
           this.return = this.subject.send(method, *list_of_args, &block_arg)
         else
-          this.return = this.subject.send(method, *list_of_args)
+          begin
+            this.return = this.subject.send(method, *list_of_args)
+          rescue Exception => e
+            this.set_backtrace(example, e, given_caller)
+          end
         end
       end
     end
 
-  end
 
-  def describe_args(args)
-    "(#{args.collect { |x| x.kind_of?(Argument) ? x.name : "#{x}:#{x.class}" }.join(',')})"
   end
-
 end

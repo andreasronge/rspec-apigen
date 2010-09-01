@@ -33,8 +33,8 @@ module RSpec::ApiGen
 
     # create method to set the given_block variable
     given_block = nil
-    MetaHelper.create_singleton_method(self, :Given) { |&b| given_block = b }
-
+    given_caller = nil # so that we can print correct line number if there is an exception
+    MetaHelper.create_singleton_method(self, :Given) { |*a, &b| given_block = b; given_caller = b.send(:caller)}
 
     MetaHelper.create_singleton_method(self, :Description) { |desc| context(desc){} }
     
@@ -52,7 +52,7 @@ module RSpec::ApiGen
 
     given = nil
     context "Given" do
-      given = Given.new(self, method, args, &given_block)
+      given = Given.new(self, method, args, given_caller, &given_block)
     end 
 
     # todo should be possible to have several Then
@@ -74,7 +74,7 @@ module RSpec::ApiGen
 
   def create_scenarios_for(method, param, &block)
     args = param[:args]
-    context "##{method}", describe_args(args) do
+    context "##{method}", Argument.describe(args) do
       run_scenario(method, args, block)
     end
   end
@@ -103,29 +103,14 @@ module RSpec::ApiGen
   def instance_methods(&block)
     clazz = describes
     describe "Public Instance Methods" do
-      meth_ctx = Method.new
-
-      # TODO - how do I find which methods was defined on the clazz and not inherited ?
-      def_methods = clazz.public_instance_methods - Object.public_instance_methods
-      current_context = self
-      def_methods.each do |meth_name|
-        MetaHelper.create_singleton_method(meth_ctx, meth_name) do |*args, &example_group|
-          current_context.create_scenarios_for(meth_name, :args => args, &example_group)
-        end
-      end
-      meth_ctx.instance_eval(&block)
-    end
-  end
-
-  def instance_module_methods(&block)
-    clazz = describes
-    raise "instance_module_methods should only be used for modules #{clazz} is not a module" unless clazz.class == Module
-    describe "Public Instance Module Methods" do
+      # Check if we are testing a module - in that case construct a new class that includes that Module
+      # so that we can test this Module
       subject do
         x = Class.new
         x.send(:include, clazz)
         x.new
-      end
+      end if clazz.class == Module
+
       meth_ctx = Method.new
 
       # TODO - how do I find which methods was defined on the clazz and not inherited ?
@@ -138,6 +123,6 @@ module RSpec::ApiGen
       end
       meth_ctx.instance_eval(&block)
     end
-
   end
+
 end

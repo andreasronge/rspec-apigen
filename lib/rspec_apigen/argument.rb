@@ -15,6 +15,11 @@ module RSpec::ApiGen
     def to_s
       "Arg #{name}"
     end
+
+    def describe(args)
+      "(#{args.collect { |x| x.kind_of?(Argument) ? x.name : "#{x}:#{x.class}" }.join(',')})"
+    end
+
   end
 
 end

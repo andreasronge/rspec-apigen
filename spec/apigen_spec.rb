@@ -2,7 +2,7 @@ require 'spec_helper'
 
 
 describe RSpec::ApiGen do
-  instance_module_methods do
+  instance_methods do
     static_methods(arg_block(:block)) do
       Description "describes all static methods"
 
