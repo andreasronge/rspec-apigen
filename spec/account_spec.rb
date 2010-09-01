@@ -46,6 +46,23 @@ describe Account do
           end
         end
       end
+
+      Scenario 'transfer amount and currency have valid values2' do
+        subject { Account.new(50, 'USD') }
+        Given do
+          arg.amount = 5
+          arg.currency = 'USD'
+        end
+        Return "A transfer of 5 USD from Account with 50 USD" do
+          it { should be_kind_of(TransferDSL) }
+        end
+        Then do
+          it "should not change subject" do
+            given.subject.balance.should == subject.balance
+          end
+        end
+      end
+      
     end
   end
 end

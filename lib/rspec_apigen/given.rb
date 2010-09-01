@@ -16,22 +16,23 @@ module RSpec::ApiGen
       @args = {}
       @fixtures = {}
       block_arg = nil
-      context.it "no arguments" do
-        list_of_args.find_all { |a| a.kind_of?(Argument) }.each do |a|
-          MetaHelper.create_singleton_method(this.arg, "#{a.name}=") do |val|
-            this.args[a.name] = val
+
+      list_of_args.find_all { |a| a.kind_of?(Argument) }.each do |a|
+        MetaHelper.create_singleton_method(@arg, "#{a.name}=") do |val|
+          this.args[a.name] = val
+        end
+        if (a.accept_block?)
+          MetaHelper.create_singleton_method(@arg, "#{a.name}") do | &bl |
+            block_arg = bl
           end
-          if (a.accept_block?)
-            MetaHelper.create_singleton_method(this.arg, "#{a.name}") do | &bl |
-              block_arg = bl
-            end
-          else
-            MetaHelper.create_singleton_method(this.arg, "#{a.name}") do
-              this.args[a.name]
-            end
+        else
+          MetaHelper.create_singleton_method(@arg, "#{a.name}") do
+            this.args[a.name]
           end
         end
+      end
 
+      context.it "no arguments" do
         # create the arguments
         MetaHelper.create_singleton_method(self, :arg) { this.arg }
 
