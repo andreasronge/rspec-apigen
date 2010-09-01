@@ -16,8 +16,21 @@ module RSpec::ApiGen
       "Arg #{name}"
     end
 
-    def describe(args)
-      "(#{args.collect { |x| x.kind_of?(Argument) ? x.name : "#{x}:#{x.class}" }.join(',')})"
+    def self.inspect_args(args)
+      args.collect do |x|
+        case x
+          when Argument
+            x.name
+          when RSpec::Mocks::Mock
+            x.instance_variable_get('@name')
+          else
+            "#{x}:#{x.class}"
+        end
+      end
+    end
+
+    def self.describe(args)
+      "(#{inspect_args(args).join(', ')})"
     end
 
   end

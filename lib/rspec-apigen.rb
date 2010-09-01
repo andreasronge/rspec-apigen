@@ -48,7 +48,7 @@ module RSpec::ApiGen
     self.instance_eval(&block)
 
     # if there are no then_block or describe_return then there is nothing to do
-    return if describe_return.nil? && then_block.nil?
+    return if describe_return.nil? && then_block.nil? && then_desc.nil?
 
     given = nil
     context "Given" do
@@ -59,6 +59,9 @@ module RSpec::ApiGen
     context "Then #{then_desc}" do
       self.send(:define_method, :given) { given }
       self.send(:define_method, :arg) { given.arg }
+      self.send(:define_method, :fixtures) { given.fixtures }
+
+
       # use the same subject as we used when calling the method on it in the given block
       #      self.send(:define_method, :subject) { given.subject }
 
