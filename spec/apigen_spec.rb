@@ -1,6 +1,11 @@
-require 'spec_helper'
+require 'rspec'
+
+$LOAD_PATH.unshift File.join(File.dirname(__FILE__), "..", "lib")
+
+require 'rspec-apigen'
 
 
+# An attempt to use rspec-apigen to specify itself !
 describe RSpec::ApiGen do
   instance_methods do
     static_methods(arg_block(:block)) do

@@ -1,11 +1,5 @@
+$LOAD_PATH.unshift File.join(File.dirname(__FILE__))
 require 'spec_helper'
-
-# Inspiration for Fixtures
-# http://eggsonbread.com/2010/05/25/speed-up-your-specs-with-set/
-# http://github.com/bmabey/database_cleaner
-# http://blog.lawrencepit.com/2009/06/08/machinery-to-create-object-graphs-and-speed-up-tests/
-# http://github.com/lachie/hornsby
-
 
 describe TransferDSL do
 

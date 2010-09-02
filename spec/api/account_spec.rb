@@ -1,3 +1,4 @@
+$LOAD_PATH.unshift File.join(File.dirname(__FILE__))
 require 'spec_helper'
 
 
@@ -29,7 +30,6 @@ describe Account do
 
   instance_methods do
     transfer(arg(:amount), arg(:currency)) do
-
       Description 'bla bla bla'
       Scenario 'transfer amount and currency have valid values' do
         subject { Account.new(50, 'USD') }
