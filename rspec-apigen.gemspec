@@ -15,6 +15,6 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = ">= 1.3.6"
   s.add_runtime_dependency "rspec", ">= 2.0.0.beta.20"
   s.rubyforge_project = 'rspec-apigen'
-  s.files        = Dir.glob("{bin,lib}/**/*") + %w(README.rdoc)
+  s.files        = Dir.glob("{bin,lib}/**/*") + %w(README.rdoc Rakefile rspec-apigen.gemspec Gemfile)
   s.require_path = 'lib'
 end
