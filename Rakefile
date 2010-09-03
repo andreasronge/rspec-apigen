@@ -17,7 +17,7 @@ end
 desc "release gem to gemcutter"
 task :release => :build do
   assert_committed
-  system "gem push rspec-apigen-#{RSpec::ApiGen::VERSION}"
+  system "gem push rspec-apigen-#{RSpec::ApiGen::VERSION}.gem"
 end
 
 def assert_committed
