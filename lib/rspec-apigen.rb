@@ -5,4 +5,4 @@ require 'rspec_apigen/argument'
 require 'rspec_apigen/fixture'
 require 'rspec_apigen/given'
 require 'rspec_apigen/config.rb'
-
+require 'rspec_apigen/formatter'
