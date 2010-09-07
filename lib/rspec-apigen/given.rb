@@ -7,17 +7,17 @@ module RSpec::ApiGen
     attr_accessor :return
 
 
-    # list_of_args - the list of arguments current method accept
+    # args - the list of arguments current method accept
     # When the given block is evaluated in this method
     # the Given#args will return a hash of name or argument and its value.
-    def initialize(context, method, list_of_args, given_caller, &block)
+    def initialize(context, method, args, given_caller, &block)
       this = self # so we can access it as closure
       @arg = Object.new
       @args = {}
       @fixtures = {}
       block_arg = nil
 
-      list_of_args.find_all { |a| a.kind_of?(Argument) }.each do |a|
+      args.find_all { |a| a.kind_of?(Argument) }.each do |a|
         MetaHelper.create_singleton_method(@arg, "#{a.name}=") do |val|
           this.args[a.name] = val
         end
@@ -32,6 +32,7 @@ module RSpec::ApiGen
         end
       end
 
+      list_of_args = args.clone
       context.it "no arguments" do
         # create the arguments
         MetaHelper.create_singleton_method(self, :arg) { this.arg }

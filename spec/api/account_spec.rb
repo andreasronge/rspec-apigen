@@ -27,6 +27,19 @@ describe Account do
           it { subject.currency.should == 'USD' } # given.currency }
         end
       end
+
+      Scenario 'account and currency has valid values' do
+        Given do
+          arg.amount   = 10
+          arg.currency = 'USD'
+        end
+
+        Return "an Account with given amount and currency" do
+          it { subject.balance.should == 10 } #given.amount }
+          it { subject.currency.should == 'USD' } # given.currency }
+        end
+      end
+
     end
   end
 
